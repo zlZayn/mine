@@ -1,6 +1,6 @@
 # My personal repository
 
-> I build a cozy little nook for my content and knowledge.
+> I'm building a cozy little nook for my content and knowledge.
 > May they always stay here where I can see them, and never get lost.
 
 ### I use it to store the articles I've written.
