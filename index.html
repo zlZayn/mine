@@ -1,77 +1,95 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R语言文章 - 非线性最小二乘法与线性模型</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    
-    <!-- Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#2c3e50',
-                        secondary: '#3498db',
-                        accent: '#e74c3c',
-                        light: '#f8fafc',
-                        dark: '#1e293b'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
-    
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .card-shadow {
-                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            }
-            .card-hover {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-            }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            }
-        }
-    </style>
-</head>
-<body class="bg-gray-50 font-sans text-gray-800 min-h-screen flex items-center justify-center p-4">
-    <!-- 单个文章卡片 -->
-    <div class="w-full max-w-md">
-        <article class="bg-white rounded-xl overflow-hidden card-shadow card-hover">
-            <!-- 卡片顶部渐变图标区 -->
-            <div class="h-48 bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
-                <i class="fa fa-calculator text-white text-5xl"></i>
-            </div>
-            <!-- 卡片内容区 -->
-            <div class="p-6">
-                <!-- 分类标签 -->
-                <div class="flex items-center text-sm text-gray-500 mb-3">
-                    <span class="flex items-center"><i class="fa fa-tag mr-1"></i> 回归分析</span>
-                    <span class="mx-2">•</span>
-                    <span class="flex items-center"><i class="fa fa-clock-o mr-1"></i> 数据分析</span>
-                </div>
-                <!-- 文章标题（带链接） -->
-                <h3 class="text-xl font-bold mb-3">
-                    <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-secondary transition-colors">
-                        【R 语言】非线性最小二乘法与线性模型
-                    </a>
+ <html lang="zh-CN">
+ 
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>R 语言</title>
+     <script src="https://cdn.tailwindcss.com"></script>
+ </head>
+ <body class="bg-gray-50 p-6 pt-16 min-h-screen">
+     <div class="max-w-7xl mx-auto">
+         <!-- 标题 -->
+         <div class="text-center mb-10">
+             <h1 class="text-3xl font-bold text-gray-800 mb-2">R 语言</h1>
+             <p class="text-gray-600">知乎专栏</p>
+         </div>
+         
+         <!-- 卡片网格布局 -->
+         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6">
+    <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-red-300 to-red-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】非线性最小二乘法与线性模型
                 </h3>
-                <!-- 文章简介 -->
-                <p class="text-gray-600 mb-4">探索R语言中非线性最小二乘法的实现方法，以及如何与线性模型进行比较和应用。</p>
-                <!-- 阅读全文按钮（带链接） -->
-                <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-secondary font-medium hover:underline">
-                    阅读全文 <i class="fa fa-external-link ml-1"></i>
-                </a>
             </div>
-        </article>
-    </div>
-</body>
-</html>
+        </div>
+    </a>
+    <a href="https://zhuanlan.zhihu.com/p/1951089194756703939" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-orange-300 to-orange-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】洛伦兹曲线与基尼指数
+                </h3>
+            </div>
+        </div>
+    </a>
+    <a href="https://zhuanlan.zhihu.com/p/1949603330578953873" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-yellow-300 to-yellow-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】broom 包进行整洁建模
+                </h3>
+            </div>
+        </div>
+    </a>
+
+    <a href="https://zhuanlan.zhihu.com/p/1948532373101713365" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-teal-300 to-teal-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】ggplot2 绘制已知函数图像
+                </h3>
+            </div>
+        </div>
+    </a>
+    <a href="https://zhuanlan.zhihu.com/p/1946672841723454894" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-blue-300 to-blue-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】mice 包进行缺失值多重插补与批量建模
+                </h3>
+            </div>
+        </div>
+    </a>
+    <a href="https://zhuanlan.zhihu.com/p/1944083434071917665" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-violet-300 to-violet-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】匿名函数
+                </h3>
+            </div>
+        </div>
+    </a>
+
+    <a href="https://zhuanlan.zhihu.com/p/1944921736941384138" target="_blank" class="block">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
+            <div class="h-2 bg-gradient-to-r from-pink-300 to-pink-600 transition-all duration-300 hover:h-3"></div>
+            <div class="p-4 flex-1 flex items-center">
+                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
+                    【R 语言】一种基于嵌套数据框的工作流
+                </h3>
+            </div>
+        </div>
+    </a>
+        </div>
+     </div>
+ </body>
+ </html>
