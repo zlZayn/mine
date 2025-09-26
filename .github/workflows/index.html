@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R语言文章集合</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        secondary: '#3498db',
+                        accent: '#e74c3c',
+                        light: '#f8fafc',
+                        dark: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-shadow {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .card-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+    <!-- 顶部导航栏 -->
+    <header class="bg-primary text-white shadow-md fixed w-full top-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-line-chart text-2xl text-secondary"></i>
+                <h1 class="text-xl md:text-2xl font-bold">R语言学习资源</h1>
+            </div>
+            <nav class="hidden md:block">
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="hover:text-secondary transition-colors"><i class="fa fa-home mr-1"></i>首页</a></li>
+                    <li><a href="#" class="hover:text-secondary transition-colors"><i class="fa fa-book mr-1"></i>教程</a></li>
+                    <li><a href="#" class="hover:text-secondary transition-colors"><i class="fa fa-code mr-1"></i>代码</a></li>
+                    <li><a href="#" class="hover:text-secondary transition-colors"><i class="fa fa-question-circle mr-1"></i>帮助</a></li>
+                </ul>
+            </nav>
+            <button class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 pt-28 pb-16">
+        <!-- 页面标题 -->
+        <div class="text-center mb-12">
+            <h2 class="text-[clamp(1.8rem,4vw,2.8rem)] font-bold text-primary mb-4">R语言精选文章</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto text-lg">以下是关于R语言各种实用技术和方法的精选文章，点击标题可在新标签页中阅读全文。</p>
+        </div>
+        
+        <!-- 文章卡片网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- 文章卡片 1 -->
+            <article class="bg-white rounded-xl overflow-hidden card-shadow card-hover">
+                <div class="h-48 bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <i class="fa fa-calculator text-white text-5xl"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center text-sm text-gray-500 mb-3">
+                        <span class="flex items-center"><i class="fa fa-tag mr-1"></i> 回归分析</span>
+                        <span class="mx-2">•</span>
+                        <span class="flex items-center"><i class="fa fa-clock-o mr-1"></i> 数据分析</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">
+                        <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-secondary transition-colors">
+                            【R 语言】非线性最小二乘法与线性模型
+                        </a>
+                    </h3>
+                    <p class="text-gray-600 mb-4">探索R语言中非线性最小二乘法的实现方法，以及如何与线性模型进行比较和应用。</p>
+                    <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-secondary font-medium hover:underline">
+                        阅读全文 <i class="fa fa-external-link ml-1"></i>
+                    </a>
+                </div>
+            
