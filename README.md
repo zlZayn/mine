@@ -1,4 +1,4 @@
-# This GitHub repository is my personal space
+# My personal repository
 
 > I build a cozy little nook for my content and knowledge.
 > May they always stay here where I can see them, and never get lost.
