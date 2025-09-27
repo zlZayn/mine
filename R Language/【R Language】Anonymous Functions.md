@@ -293,6 +293,7 @@ Appendix:
 
 References:
 
-[优雅的循环迭代和泛函数编程-purr packages 和 map 函数](https://link.zhihu.com/?target=https%3A//blog.csdn.net/nixiang_888/article/details/123826084)[【Tidyverse优雅编程】管道符：是时候用 |>替代 %>% 了吗？](https://zhuanlan.zhihu.com/p/1942366213322807149)
+[优雅的循环迭代和泛函数编程-purr packages 和 map 函数](https://link.zhihu.com/?target=https%3A//blog.csdn.net/nixiang_888/article/details/123826084)
+[【Tidyverse优雅编程】管道符：是时候用 |>替代 %>% 了吗？](https://zhuanlan.zhihu.com/p/1942366213322807149)
 
 Declaration: The examples in this article are for comparison purposes only; direct vector operations are better in actual scenarios.
