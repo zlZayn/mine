@@ -172,6 +172,7 @@ export_all_nested_to_xlsx <- function(nested_df, output_dir = ".") {
   })
 
   message("\nAll exports completed! Directory: ", normalizePath(output_dir))
-}```
+}
+```
 
 ![purrr::cheatsheet](https://pic3.zhimg.com/v2-5a3d578a0218f691f72020fcf6398330_1440w.jpg)
