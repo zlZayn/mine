@@ -1,91 +1,112 @@
 <!DOCTYPE html>
- <html lang="zh-CN">
- 
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>R 语言</title>
-     <script src="https://cdn.tailwindcss.com"></script>
- </head>
- <body class="bg-gray-50 p-6 pt-16 min-h-screen">
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R 语言</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 使用CSS选择器定义卡片样式 */
+        .article-card-link { display: block; }
+        .article-card {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            transition: all 300ms ease;
+            height: 8rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .article-card:hover {
+            transform: translateY(-0.5rem);
+            box-shadow: 0 10px 18px -3px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06);
+        }
+        .article-card-gradient {
+            height: 0.5rem;
+            transition: all 300ms ease;
+        }
+        .article-card:hover .article-card-gradient { height: 0.75rem; }
+        .article-card-content {
+            padding: 1rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .article-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6 pt-16 min-h-screen">
      <div class="max-w-7xl mx-auto">
          <!-- 标题 -->
          <div class="text-center mb-10">
-             <h1 class="text-3xl font-bold text-gray-800 mb-2">R 语言</h1>
+             <h1 class="text-4xl font-bold text-gray-800 mb-2">R 语言</h1>
              <p class="text-gray-600">知乎专栏</p>
          </div>
          
          <!-- 卡片网格布局 -->
          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6">
-    <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-red-300 to-red-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】非线性最小二乘法与线性模型
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-red-300 to-red-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】非线性最小二乘法与线性模型</h3>
             </div>
         </div>
     </a>
-    <a href="https://zhuanlan.zhihu.com/p/1951089194756703939" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-orange-300 to-orange-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】洛伦兹曲线与基尼指数
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1951089194756703939" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-orange-300 to-orange-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】洛伦兹曲线与基尼指数</h3>
             </div>
         </div>
     </a>
-    <a href="https://zhuanlan.zhihu.com/p/1949603330578953873" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-yellow-300 to-yellow-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】broom 包进行整洁建模
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1949603330578953873" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-yellow-300 to-yellow-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】broom 包进行整洁建模</h3>
             </div>
         </div>
     </a>
 
-    <a href="https://zhuanlan.zhihu.com/p/1948532373101713365" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-teal-300 to-teal-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】ggplot2 绘制已知函数图像
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1948532373101713365" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-teal-300 to-teal-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】ggplot2 绘制已知函数图像</h3>
             </div>
         </div>
     </a>
-    <a href="https://zhuanlan.zhihu.com/p/1946672841723454894" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-blue-300 to-blue-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】mice 包进行缺失值多重插补与批量建模
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1946672841723454894" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-blue-300 to-blue-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】mice 包进行缺失值多重插补与批量建模</h3>
             </div>
         </div>
     </a>
-    <a href="https://zhuanlan.zhihu.com/p/1944083434071917665" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-violet-300 to-violet-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】匿名函数
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1944083434071917665" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-violet-300 to-violet-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】匿名函数</h3>
             </div>
         </div>
     </a>
 
-    <a href="https://zhuanlan.zhihu.com/p/1944921736941384138" target="_blank" class="block">
-        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-lg h-40 flex flex-col">
-            <div class="h-2 bg-gradient-to-r from-pink-300 to-pink-600 transition-all duration-300 hover:h-3"></div>
-            <div class="p-4 flex-1 flex items-center">
-                <h3 class="text-lg font-semibold text-gray-800 leading-relaxed">
-                    【R 语言】一种基于嵌套数据框的工作流
-                </h3>
+    <a href="https://zhuanlan.zhihu.com/p/1944921736941384138" target="_blank" class="article-card-link">
+        <div class="article-card">
+            <div class="article-card-gradient bg-gradient-to-r from-pink-300 to-pink-600"></div>
+            <div class="article-card-content">
+                <h3 class="article-card-title">【R 语言】一种基于嵌套数据框的工作流</h3>
             </div>
         </div>
     </a>
