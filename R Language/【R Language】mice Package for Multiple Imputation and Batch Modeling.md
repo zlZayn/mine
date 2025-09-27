@@ -179,4 +179,10 @@ Built-in univariate imputation methods in the `mice` package
 
 References:
 
-[mice](https://link.zhihu.com/?target=https%3A//amices.org/mice/)[处理缺失值之多重插补（Multiple Imputation）](https://zhuanlan.zhihu.com/p/36436260)[缺失值的高级处理：用mice进行多重填补](https://link.zhihu.com/?target=https%3A//cloud.tencent.com/developer/article/1972392)[R语言缺失值判断与处理mice包-3_r mice-CSDN博客](https://link.zhihu.com/?target=https%3A//blog.csdn.net/LeaningR/article/details/120145073)
+[mice](https://link.zhihu.com/?target=https%3A//amices.org/mice/)
+
+[处理缺失值之多重插补（Multiple Imputation）](https://zhuanlan.zhihu.com/p/36436260)
+
+[缺失值的高级处理：用mice进行多重填补](https://link.zhihu.com/?target=https%3A//cloud.tencent.com/developer/article/1972392)
+
+[R语言缺失值判断与处理mice包-3_r mice-CSDN博客](https://link.zhihu.com/?target=https%3A//blog.csdn.net/LeaningR/article/details/120145073)
