@@ -285,4 +285,4 @@ ggplot() +
 
 **It's worth mentioning that `function()` can be abbreviated as `\()`. For details, see my previous article:**
 
-[【R 语言】匿名函数](https://zhuanlan.zhihu.com/p/1944083434071917665)
+[【R Language】Anonymous Functions](https://zhuanlan.zhihu.com/p/1944083434071917665)
