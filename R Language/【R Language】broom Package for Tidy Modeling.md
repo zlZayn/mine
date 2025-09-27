@@ -68,7 +68,7 @@ tibble(Model = names(models)) |>
 
 The nested data frame method has a unique workflow
 
-> For details, see my previous article: [【R 语言】一种基于嵌套数据框的工作流](https://zhuanlan.zhihu.com/p/1944921736941384138)
+> For details, see my previous article:[【R Language】A Workflow Based on Nested Data Frames](https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91A%20Workflow%20Based%20on%20Nested%20Data%20Frames.md)
 
 ```R
 models_results <- tibble(Model = names(models)) |>
@@ -85,7 +85,7 @@ Nested data frame format
 
 **Batch Formatted Export of Nested Data Frames:**
 
-> For details, see my previous article: [【R 语言】一种基于嵌套数据框的工作流](https://zhuanlan.zhihu.com/p/1944921736941384138)
+> For details, see my previous article:[【R Language】A Workflow Based on Nested Data Frames](https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91A%20Workflow%20Based%20on%20Nested%20Data%20Frames.md)
 
 ```R
 # This uses functions encapsulated in the article mentioned above
@@ -124,4 +124,4 @@ References:
 
 -   My previous article:
 
-[【R 语言】一种基于嵌套数据框的工作流](https://zhuanlan.zhihu.com/p/1944921736941384138)
+[【R Language】A Workflow Based on Nested Data Frames](https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91A%20Workflow%20Based%20on%20Nested%20Data%20Frames.md)
