@@ -104,74 +104,98 @@ warehouse_nested_df3 <- warehouse_nested_df2 |>
 Subsequently, we can use the `walk` function to export to .xlsx
 
 ```R
-# This uses a function I encapsulated (included at the end)
-> warehouse_nested_df3 |> export_all_nested_to_xlsx(output_dir = "./otpt")
-已导出：./otpt/data.xlsx
-已导出：./otpt/drugname_result.xlsx
-已导出：./otpt/grade_result.xlsx
-
-所有导出完成！目录：D:\RDirectory\pct\otpt
+setwd("D:/RDirectory/pct")
+# This uses the function I have encapsulated (attached at the end of the text)
+warehouse_nested_df3 |> export_all_nested_to_xlsx(output_dir = "./otpt")
+# Alternatively, the output after transposition (rev = TRUE)
+warehouse_nested_df3 |> export_all_nested_to_xlsx(output_dir = "./otpt", rev = TRUE)
 ```
 
-The results are as follows:
+![](https://pic4.zhimg.com/v2-fda2c6a08e305b1fd0423a4a6dd2d2b5_1440w.jpg)
 
-![Exported Tables](https://pic3.zhimg.com/v2-e6a11eec0fb703f213f85fedd20a7f24_1440w.jpg)![drugname_result.xlsx](https://pic3.zhimg.com/v2-523efe30ca91ae2d0a2f23af20a9086c_1440w.jpg)
+The two effects are as follows (not all are displayed here):
+
+![otpt](https://pic3.zhimg.com/v2-29fdde6672064f60309ccfb457bcbe0a_1440w.jpg)![drugname_result.xlsx](https://pic3.zhimg.com/v2-523efe30ca91ae2d0a2f23af20a9086c_1440w.jpg)
 
 * * *
 
 Appendix:
 
 ```R
-export_all_nested_to_xlsx <- function(nested_df, output_dir = ".") {
-  # Check required packages
-  required_pkgs <- c("openxlsx", "tidyverse")
-  lapply(required_pkgs, function(pkg) {
+export_all_nested_to_xlsx <- function(nested_df,
+                                      output_dir = ".",
+                                      rev = FALSE) {
+  # 检查必要包
+  required_pkgs <- c("openxlsx", "tidyverse", "fs")
+  map(required_pkgs, function(pkg) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
-      stop(paste("Please install package: install.packages('", pkg, "')", sep = ""))
+      stop(str_c("请安装包：install.packages('", pkg, "')"))
     }
   })
   library(openxlsx)
   library(tidyverse)
-
-  # Create output directory
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir,
-               recursive = TRUE,
-               showWarnings = FALSE)
-    message("Output directory created: ", output_dir)
+  library(fs)
+  
+  # 强制转换为绝对路径（关键步骤）
+  output_dir_abs <- path(output_dir) |>  # 解析路径
+    path_expand() |>                     # 展开~等符号
+    path_abs()                           # 强制转为绝对路径（无视输入格式）
+  
+  # 创建目录
+  if (!dir_exists(output_dir_abs)) {
+    dir_create(output_dir_abs, recurse = TRUE)
+    message(str_c("已创建输出目录：", output_dir_abs))
   }
-
-  # Identify nested columns
+  
+  # 根据rev参数决定是否转置
+  if (rev) {
+    first_col <- names(nested_df)[1]
+    # 按第一列转置
+    nested_df <- nested_df |>
+      column_to_rownames(first_col) |>
+      t() |>
+      as_tibble(rownames = "ResultType")
+  }
+  
+  # 识别嵌套列和分组列
   nested_cols <- names(nested_df)[map_lgl(nested_df, ~ is.list(.) &&
                                             all(map_lgl(., is.data.frame)))]
   if (length(nested_cols) == 0)
-    stop("No nested data frame columns")
-
-  # Identify grouping column
+    stop("无嵌套数据框列")
   group_col <- setdiff(names(nested_df), nested_cols)[1]
   if (is.na(group_col))
-    stop("Missing grouping column")
-
-  # Export each nested column to Excel
+    stop("缺少分组列")
+  
+  # 获取所有工作表名
+  sheet_names <- map_chr(seq_len(nrow(nested_df)), function(i) {
+    nested_df[[group_col]][i] |>
+      str_replace_all('[\\\\/:*?\"<>|]', "_") |>
+      str_sub(1, 31)
+  })
+  n_sheets <- length(sheet_names)
+  sheets_desc <- str_c("各文件均包含 ",
+                       n_sheets,
+                       " 个工作表：",
+                       str_c(sheet_names, collapse = "、"))
+  
+  # 导出文件（使用绝对路径）
   walk(nested_cols, function(col) {
     wb <- createWorkbook()
     walk(seq_len(nrow(nested_df)), function(i) {
-      # Process worksheet name
-      sheet_name <- gsub("[\\/:*?\"<>|", "_", nested_df[[group_col]][i])
-      sheet_name <- substr(sheet_name, 1, 31)
-
-      # Write data
+      sheet_name <- sheet_names[i]
       addWorksheet(wb, sheet_name)
       writeData(wb, sheet_name, nested_df[[col]][[i]])
       setColWidths(wb, sheet_name, 1:ncol(nested_df[[col]][[i]]), "auto")
     })
-    # Save file (without date)
-    saveWorkbook(wb, file.path(output_dir, paste0(col, ".xlsx")), overwrite = TRUE)
-    message("Exported: ", file.path(output_dir, paste0(col, ".xlsx")))
+    file_path <- path(output_dir_abs, str_c(col, ".xlsx"))
+    saveWorkbook(wb, file_path, overwrite = TRUE)
+    message(str_c("已导出：", file_path))  # 这里也是绝对路径
     rm(wb)
   })
-
-  message("\nAll exports completed! Directory: ", normalizePath(output_dir))
+  
+  # 最终目录提示（确保是绝对路径）
+  message(sheets_desc)
+  message(str_c("\n所有导出完成！目录：", output_dir_abs))
 }
 ```
 
