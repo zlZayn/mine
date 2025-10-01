@@ -88,19 +88,22 @@ Nested data frame format
 > For details, see my previous article:[【R Language】A Workflow Based on Nested Data Frames](https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91A%20Workflow%20Based%20on%20Nested%20Data%20Frames.md)
 
 ```R
+setwd("D:/ObsidianDirectory/R/【R 语言】broom 包进行整洁建模")
 # This uses functions encapsulated in the article mentioned above
 models_results |> export_all_nested_to_xlsx(output_dir = "./output")
+models_results |> export_all_nested_to_xlsx(output_dir = "./output", rev = T)
 ```
 
-![](https://pic3.zhimg.com/v2-89e29b88873ee76a5ca17aa0af137820_1440w.jpg)
+![](https://pic4.zhimg.com/v2-9749f8797bacc056995bd91ff5f6b79f_1440w.jpg)
 
 Formatted export to .xlsx
 
-![](https://picx.zhimg.com/v2-a95bdb8298735686c058b228df7d2ee7_1440w.jpg)
+![](https://picx.zhimg.com/v2-2c8311218c6af5aa50f504c7be419613_1440w.jpg)
 
 And organized into separate sheets
+The effects of the two export methods:
 
-![3*4=12 sheets](https://pic2.zhimg.com/v2-c48a8bdc7b6a8f26cb7c18931368c76d_1440w.jpg)
+![3*4=12 sheets](https://pic2.zhimg.com/v2-c48a8bdc7b6a8f26cb7c18931368c76d_1440w.jpg)![4*3=12 sheets](https://pic1.zhimg.com/v2-843c0ad3c41009f69ee809e05f10ded8_1440w.jpg)
 
 * * *
 
