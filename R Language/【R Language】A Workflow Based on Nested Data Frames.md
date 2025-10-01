@@ -113,7 +113,7 @@ warehouse_nested_df3 |> export_all_nested_to_xlsx(output_dir = "./otpt", rev = T
 
 ![](https://pic4.zhimg.com/v2-fda2c6a08e305b1fd0423a4a6dd2d2b5_1440w.jpg)
 
-The two effects are as follows (not all are displayed here):
+The effect is as follows (not all are displayed here):
 
 ![otpt](https://pic3.zhimg.com/v2-29fdde6672064f60309ccfb457bcbe0a_1440w.jpg)![drugname_result.xlsx](https://pic3.zhimg.com/v2-523efe30ca91ae2d0a2f23af20a9086c_1440w.jpg)
 
