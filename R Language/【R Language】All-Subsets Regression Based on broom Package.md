@@ -156,4 +156,4 @@ generate_model_formulas <- function(data, target, main_terms_spec) {
 
 Reference:
 
-[【R Language】Tidy Modeling with broom Package](https://zhuanlan.zhihu.com/p/1949603330578953873)
+[【R Language】Tidy Modeling with broom Package](https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91broom%20Package%20for%20Tidy%20Modeling.md)
