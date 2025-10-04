@@ -103,7 +103,11 @@ def fixed_ratio_crop(input_folder, output_folder, crop_aspect_ratio=None, output
                         final_output_format = img.format
                     else:
                         output_ext = f".{output_format.lower()}"
-                        final_output_format = output_format.upper()
+                        # 确保格式名称与PIL兼容/Ensure format name is compatible with PIL
+                        if output_format.lower() == 'jpg':
+                            final_output_format = 'JPEG'
+                        else:
+                            final_output_format = output_format.upper()
                     
                     # 使用原始文件名_crop_{宽度}_{高度}格式命名/Use original_filename_crop_{width}_{height} format for naming
                     output_filename = f"{original_name}_crop_{new_width}_{new_height}{output_ext}"
@@ -124,7 +128,7 @@ def fixed_ratio_crop(input_folder, output_folder, crop_aspect_ratio=None, output
                 print(f"处理失败: {filename} - {str(e)}")
                 print(f"Processing failed: {filename} - {str(e)}")
 
-    # 官方简洁版最终提示/Official and concise final prompt
+    # 最终提示/Final prompt
     print("\n处理完成")
     print("Processing completed")
     print(f"输入目录: {input_folder}")
@@ -145,4 +149,4 @@ fixed_ratio_crop(
 )
 # second
 fixed_ratio_crop("D:/path/to/your/jpg", "D:/path/to/your/jpg/2png", None, "PNG")
-fixed_ratio_crop("D:/path/to/your/jpg", "D:/path/to/your/jpg/2png", None, "png") # 大小写不敏感/Case-insensitive
+fixed_ratio_crop("D:/path/to/your/mixed_img", "D:/path/to/your/mixed_img/2png", None, "png") # 大小写不敏感/Case-insensitive
