@@ -267,10 +267,10 @@ Error in 100 %>% { : attempt to apply non-function
 | Function Form | Syntax Features | Application Scenarios |
 | ------------- | --------------- | --------------------- |
 | function(x) { ... } | Explicitly declare parameters | Strongest compatibility, no need to load packages |
-| \(x) { ... } | Explicitly declare parameters | Stronger compatibility, concise, supported in R 4.1.0 and above, no need to load packages |
+| \\(x) { ... } | Explicitly declare parameters | Stronger compatibility, concise, supported in R 4.1.0 and above, no need to load packages |
 | ~ { ... } | Non-explicit parameter names | Weaker compatibility, concise, built into purrr package, mainly used with its map functions |
 
-In R 4.1.0 and above, \(x) can be said to be completely equivalent to function(x)
+In R 4.1.0 and above, \\(x) can be said to be completely equivalent to function(x)
 
 If the function body has only one line, the {} of anonymous functions can be omitted, for example:
 
