@@ -9,7 +9,7 @@ Chi-square distribution,
 
 $$X = {Z_1}^2 + {Z_2}^2 + ... + {Z_k}^2$$
 
-Here, $X$ follows a chi-square distribution ($X \sim \chi^2(k)$), and $k$ is its degrees of freedom.
+Here, $X$ follows a chi-square distribution ( $X \sim \chi^2(k)$ ), and $k$ is its degrees of freedom.
 
 Since every term in a chi-square distribution is a square, all values are greater than 0.
 
@@ -122,7 +122,8 @@ Due to the exponential nature of $e^{-\frac{x}{2}}$, it will always dominate whe
 
 For $k > 2$, the mode of the chi-square distribution (the x-value corresponding to the peak of its density plot) is $k - 2$; for $0 < k \leq 2$, the mode is 0. Expressed piecewise:
 
-$$\text{Mode}(k) =  \begin{cases}  0, & 0 < k \leq 2 \\ k - 2, & k > 2  \end{cases}$$
+$$\text{Mode}(k) =  \begin{cases}  0, & 0 < k \leq 2 \\
+k - 2, & k > 2  \end{cases}$$
 
 **As $df$ (i.e., $k$) increases, the mode gets closer to $df$:**
 
