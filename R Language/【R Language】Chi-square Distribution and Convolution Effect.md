@@ -374,5 +374,7 @@ ggplot(ten_dice_df, aes(x = sum, y = prob)) +
 References:
 
 [【人话统计学概念】一次搞懂卡方检验三大类型：独立性检验、同质性检验、拟合优度检验！_哔哩哔哩_bilibili](https://link.zhihu.com/?target=https%3A//www.bilibili.com/video/BV15tHQzrECH/%3Fspm_id_from%3D333.1391.0.0%26vd_source%3D44a0954fac8bbe48022f43ab92c0ddba)
+
 [深入浅出详解卡方分布：直观理解、案例求解及可视化分析](https://zhuanlan.zhihu.com/p/682218728)
+
 [卡方分布的概率密度函数和它的一些衍生问题](https://zhuanlan.zhihu.com/p/268756365)
