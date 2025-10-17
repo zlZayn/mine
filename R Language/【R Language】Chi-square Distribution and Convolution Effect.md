@@ -24,7 +24,7 @@ For $df=1$, it's easy to understand—it's simply the square of a standard norma
 
 For $df=2$, $X = {Z_1}^2 + {Z_2}^2$ is the sum of squares of two standard normal distributions. **Note that these two are independent!** The highest density is still near 0.
 
-For $df=3$, $X = {Z_1}^2 + {Z_2}^2 + {Z_3}^2$ is the sum of squares of three standard normal distributions. For $X^2$ to be 0, all three terms must be 0. Due to the **smoothing effect of convolution**, this probability becomes smaller, and this is already noticeable.
+For $df=3$, $X = {Z_1}^2 + {Z_2}^2 + {Z_3}^2$ is the sum of squares of three standard normal distributions. For $X$ to be 0, all three terms must be 0. Due to the **smoothing effect of convolution**, this probability becomes smaller, and this is already noticeable.
 
 And so on. **As $df$ increases, there are more terms, and the smoothing effect of convolution becomes more pronounced.**
 
