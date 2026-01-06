@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔罗牌重复背景生成器 - 高清版</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #110f0f;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* 控制面板 */
+        #controls {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.9);
+            text-align: center;
+            border: 1px solid rgba(224, 192, 128, 0.3);
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        input[type="file"] { display: none; }
+
+        .custom-file-upload {
+            display: inline-block;
+            padding: 18px 36px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #d4af37, #bfa030);
+            color: #1a1a1a;
+            font-weight: bold;
+            font-size: 1.2em;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .custom-file-upload:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+        }
+
+        #status {
+            margin-top: 25px;
+            color: #e0c080;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        #patternCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+
+        /* 导出按钮样式 */
+        #downloadBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 99;
+            padding: 12px 24px;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 1px;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        #downloadBtn:hover {
+            background: #d4af37;
+            color: #1a1a1a;
+            box-shadow: 0 5px 25px rgba(212, 175, 55, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <label for="fileInput" class="custom-file-upload">
+            ✨ 载入卡牌资源 ✨
+        </label>
+        <input type="file" id="fileInput" multiple accept="image/*">
+        <div id="status">导入后将自动构建全屏纹样</div>
+    </div>
+
+    <button id="downloadBtn" onclick="exportHighRes()">💾 导出高清大图 (4x)</button>
+
+    <canvas id="patternCanvas"></canvas>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const statusDiv = document.getElementById('status');
+        const canvas = document.getElementById('patternCanvas');
+        const controlsDiv = document.getElementById('controls');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let loadedImages = [];
+
+        // 窗口调整时重绘预览（普通分辨率）
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (loadedImages.length > 0) {
+                renderPatternToCanvas(canvas, 1);
+            }
+        });
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            statusDiv.textContent = "正在编织纹样...";
+            
+            try {
+                const promises = files.map(file => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.src = URL.createObjectURL(file);
+                    });
+                });
+
+                loadedImages = await Promise.all(promises);
+                
+                // 隐藏UI
+                controlsDiv.style.opacity = '0';
+                setTimeout(() => controlsDiv.style.visibility = 'hidden', 800);
+
+                // 绘图并显示
+                renderPatternToCanvas(canvas, 1);
+                canvas.style.opacity = '1';
+                
+                // 显示下载按钮
+                downloadBtn.style.visibility = 'visible';
+                downloadBtn.style.opacity = '1';
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.textContent = "读取失败，请重试";
+            }
+        });
+
+        /**
+         * 核心绘图函数
+         * @param {HTMLCanvasElement} targetCanvas - 目标画布
+         * @param {number} scaleFactor - 缩放倍率 (1为屏幕预览, 4为高清导出)
+         */
+        function renderPatternToCanvas(targetCanvas, scaleFactor = 1) {
+            if (loadedImages.length === 0) return;
+
+            const ctx = targetCanvas.getContext('2d');
+            const w = targetCanvas.width;
+            const h = targetCanvas.height;
+
+            // 绘制底色
+            ctx.fillStyle = "#12100e";
+            ctx.fillRect(0, 0, w, h);
+            
+            // 设定卡片固定宽度：以画布最小边的 15% 为基准
+            // 注意：因为 w 和 h 已经包含了 scaleFactor，所以这里不需要额外乘 scaleFactor
+            const fixedWidth = Math.min(w, h) * 0.15;
+            
+            // 密度计算
+            // 保持密度一致性，无论画布多大，覆盖率应该相似
+            const density = 50; 
+            const drawCount = Math.floor((w * h) / (fixedWidth * fixedWidth) * density);
+            
+            // 阴影参数需要随比例缩放
+            ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+            ctx.shadowBlur = 20 * scaleFactor;
+            ctx.shadowOffsetX = 8 * scaleFactor;
+            ctx.shadowOffsetY = 8 * scaleFactor;
+
+            // 为了保证每次生成（预览 vs 导出）的随机位置尽量“像”是同一套逻辑
+            // 我们可以用 seeded random，但为了简化，这里重新随机生成即可
+            // 如果希望导出图和当前预览图的布局 *完全* 一模一样，需要保存随机种子，
+            // 但对于这种生成器，重新生成一张同样风格的高清图通常也可以接受。
+            
+            for (let i = 0; i < drawCount; i++) {
+                const img = loadedImages[Math.floor(Math.random() * loadedImages.length)];
+                
+                const x = Math.random() * w;
+                const y = Math.random() * h;
+
+                // 旋转逻辑
+                const baseRotate = Math.random() < 0.5 ? 0 : Math.PI;
+                const tilt = (Math.random() - 0.5) * 2 * (10 * Math.PI / 180);
+                
+                const aspect = img.height / img.width;
+                const cardH = fixedWidth * aspect;
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(baseRotate + tilt);
+                
+                // 绘制
+                ctx.drawImage(img, -fixedWidth / 2, -cardH / 2, fixedWidth, cardH);
+                ctx.restore();
+            }
+
+            // 暗角滤镜
+            drawVignette(ctx, w, h);
+        }
+
+        function drawVignette(ctx, w, h) {
+            ctx.save();
+            ctx.shadowColor = "transparent";
+            const grad = ctx.createRadialGradient(
+                w/2, h/2, w/4,
+                w/2, h/2, Math.max(w, h)
+            );
+            grad.addColorStop(0, "transparent");
+            grad.addColorStop(1, "rgba(0,0,0,0.85)");
+            ctx.fillStyle = grad;
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.fillRect(0, 0, w, h);
+            ctx.restore();
+        }
+
+        // 高清导出功能
+        function exportHighRes() {
+            if (loadedImages.length === 0) return;
+
+            const originalText = downloadBtn.textContent;
+            downloadBtn.textContent = "生成中...";
+            downloadBtn.style.background = "#fff";
+            downloadBtn.style.color = "#000";
+
+            // 使用 setTimeout 让 UI 有机会刷新文字
+            setTimeout(() => {
+                // 1. 创建离屏 Canvas
+                const offCanvas = document.createElement('canvas');
+                const scale = 4; // 放大倍数，可自行调整 (4 = 4K/8K级别)
+
+                // 2. 设置为屏幕分辨率的 N 倍
+                offCanvas.width = window.innerWidth * scale;
+                offCanvas.height = window.innerHeight * scale;
+
+                // 3. 在大画布上绘图
+                renderPatternToCanvas(offCanvas, scale);
+
+                // 4. 转换为图片并下载
+                try {
+                    const link = document.createElement('a');
+                    // 生成时间戳文件名
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    link.download = `Tarot_Pattern_${timestamp}_HighRes.png`;
+                    link.href = offCanvas.toDataURL('image/png', 1.0); // 1.0 = 最高质量
+                    link.click();
+                } catch(e) {
+                    alert("图片生成失败，可能是图片过大。");
+                } finally {
+                    // 恢复按钮状态
+                    downloadBtn.textContent = originalText;
+                    downloadBtn.style.background = "rgba(20, 20, 20, 0.8)";
+                    downloadBtn.style.color = "#d4af37";
+                    offCanvas.remove(); // 清理内存
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

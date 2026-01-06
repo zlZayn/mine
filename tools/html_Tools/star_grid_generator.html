@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Star Grid Master Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #020617;
+            --bg-panel: rgba(15, 23, 42, 0.95);
+            --bg-card: rgba(30, 41, 59, 0.5);
+            --bg-sub-card: rgba(15, 23, 42, 0.4);
+            --primary: #fbbf24;
+            --primary-glow: rgba(251, 191, 36, 0.4);
+            --accent: #38bdf8;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 340px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            z-index: 100;
+            overflow-y: auto;
+            gap: 12px;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 10px; padding-left: 4px; margin-bottom: 4px; }
+        .logo-area h1 { font-size: 1rem; margin: 0; font-weight: 800; background: linear-gradient(135deg, #fff 0%, var(--primary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .section-tag { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 -4px 4px; }
+
+        .card { 
+            background: var(--bg-card); 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .card-inner { padding: 10px; }
+        .grid-half { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        .interactive-row {
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.2); 
+            padding: 10px; cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            border: 1px solid transparent;
+            min-height: 38px;
+            border-radius: 4px;
+        }
+        .interactive-row label { cursor: pointer; font-size: 0.75rem; font-weight: 700; z-index: 1; pointer-events: none; text-align: center; }
+        .interactive-row input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .interactive-row input[type="checkbox"] { display: none; }
+
+        .is-active-border { border-color: var(--primary) !important; }
+        .is-active-fill { border-color: var(--primary); }
+
+        .grid-master-container {
+            display: flex;
+            gap: 0;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .grid-trigger { flex: 1; z-index: 2; }
+        .grid-expansion {
+            flex: 0;
+            width: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-sub-card);
+            transition: var(--transition);
+            white-space: nowrap;
+            padding: 0;
+        }
+        .grid-expansion.expanded {
+            flex: 2;
+            width: auto;
+            padding: 0 10px;
+            margin-left: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .label-row label { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); }
+        .label-row .val { font-family: 'JetBrains Mono'; font-size: 0.65rem; color: var(--primary); }
+
+        .slider-group { display: flex; gap: 8px; }
+        .mode-fixed .dual-only { display: none; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: #fff; border-radius: 50%; border: 2px solid var(--primary); }
+
+	input::-webkit-outer-spin-button,
+	input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] { 
+            width: 100%; background: var(--bg-deep); border: 1px solid var(--border); 
+            color: #fff; padding: 6px 8px; border-radius: 4px; font-size: 0.75rem; font-family: 'JetBrains Mono';
+            transition: var(--transition);
+        }
+        input[type="number"]:focus { border-color: var(--primary); background: rgba(251, 191, 36, 0.05); }
+
+        /* 修改后的 Select 样式 */
+        .select-wrapper { position: relative; width: 100%; }
+        .select-wrapper::after {
+            content: "";
+            position: absolute; right: 8px; top: 50%;
+            transform: translateY(-50%);
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-muted);
+            pointer-events: none;
+            transition: var(--transition);
+        }
+        .select-wrapper:hover::after { border-top-color: var(--primary); }
+        
+        select { 
+            width: 100%; background: var(--bg-deep); border: 1px solid var(--border); 
+            color: #fff; padding: 6px 24px 6px 8px; border-radius: 4px; font-size: 0.7rem; 
+            font-family: inherit; font-weight: 600; cursor: pointer;
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            transition: var(--transition);
+	    color-scheme: dark;
+        }
+
+        select option {
+            background-color: #0f172a; /* 对应变量 --bg-panel 的深蓝色 */
+            color: #f1f5f9;
+            padding: 10px;
+        }
+
+        select:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+        select:focus { border-color: var(--primary); }
+
+        /* 修改后的 Lock Button 样式 */
+        .lock-toggle { 
+            background: var(--bg-deep); border: 1px solid var(--border); color: var(--text-muted); 
+            min-width: 32px; height: 28px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 4px; cursor: pointer; transition: var(--transition);
+        }
+        .lock-toggle:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+        .lock-toggle.active { color: var(--primary); border-color: var(--primary); background: rgba(251, 191, 36, 0.1); }
+
+        .btn-export { 
+            width: 100%; background: var(--primary); color: #451a03; border: none; 
+            padding: 12px; border-radius: var(--radius-md); font-weight: 800; 
+            font-size: 0.75rem; cursor: pointer; margin-top: auto; transition: var(--transition);
+        }
+        .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+
+        .viewport { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .viewport::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at center, #1e293b 0%, #020617 100%); z-index: 0; }
+        .viewport.is-trans::before { opacity: 0; }
+
+        canvas { 
+            position: relative; z-index: 1; box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
+            max-width: 90%; max-height: 90%; 
+            background-image: linear-gradient(45deg, #0f172a 25%, transparent 25%), linear-gradient(-45deg, #0f172a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #0f172a 75%), linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .res-tag { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 4px; font-family: 'JetBrains Mono'; font-size: 0.6rem; color: var(--text-muted); border: 1px solid var(--border); z-index: 2; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="logo-area">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--primary)"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.5-6.2 4.5 2.3-7.3-6.1-4.5h7.6z"/></svg>
+        <h1>STAR GRID MASTER</h1>
+    </div>
+
+    <div class="section-tag">画布设置 (Canvas)</div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="label-row"><label>尺寸 (宽 × 高)</label></div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="number" id="i-w" value="1920">
+                <button class="lock-toggle" id="btn-lock" title="锁定宽高比">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </button>
+                <input type="number" id="i-h" value="1080">
+            </div>
+        </div>
+    </div>
+
+    <div class="section-tag">几何排列 (Geometry)</div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="grid-half">
+                <div>
+                    <div class="label-row"><label>网格大小</label><span class="val" id="v-size">80</span></div>
+                    <input type="range" id="i-size" min="20" max="300" value="80">
+                </div>
+                <div>
+                    <div class="label-row"><label>渐变模式</label></div>
+                    <div class="select-wrapper">
+                        <select id="i-grad-dir">
+                            <option value="radial">圆形扩散</option>
+                            <option value="radial-inv">圆形收缩</option>
+                            <option value="x">水平渐变</option>
+                            <option value="y">垂直渐变</option>
+                            <option value="none">固定不变</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top:12px">
+                <div class="label-row">
+                    <label>星星大小缩放</label>
+                    <div class="val"><span id="v-gap-s">0%</span><span class="dual-only"> → <span id="v-gap-e">90%</span></span></div>
+                </div>
+                <div class="slider-group">
+                    <input type="range" id="i-gap-s" min="-300" max="100" value="0">
+                    <input type="range" id="i-gap-e" class="dual-only" min="-300" max="100" value="90">
+                </div>
+            </div>
+
+            <div style="margin-top:12px">
+                <div class="label-row">
+                    <label>旋转角度</label>
+                    <div class="val"><span id="v-rot-s">0°</span><span class="dual-only"> → <span id="v-rot-e">90°</span></span></div>
+                </div>
+                <div class="slider-group">
+                    <input type="range" id="i-rot-s" min="-180" max="180" value="0">
+                    <input type="range" id="i-rot-e" class="dual-only" min="-180" max="180" value="90">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-tag">星星样式 (Shape)</div>
+    <div class="card">
+        <div class="interactive-row" id="row-fg" style="border-radius: 0;">
+            <label>点击选择星星颜色</label>
+            <input type="color" id="i-fg" value="#fbbf24">
+        </div>
+        <div class="card-inner">
+            <div class="label-row"><label>星星透明度</label><span class="val" id="v-fg-op">100%</span></div>
+            <input type="range" id="i-fg-op" min="0" max="100" value="100">
+        </div>
+    </div>
+
+    <div class="section-tag">背景设置 (Background)</div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="grid-half">
+                <div class="interactive-row" id="row-bg">
+                    <label>实色背景</label>
+                    <input type="color" id="i-bg" value="#020617">
+                </div>
+                <div class="interactive-row" id="row-trans">
+                    <label>透明背景</label>
+                    <input type="checkbox" id="i-trans">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-tag">网格线 (Grid Lines)</div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="grid-master-container">
+                <div class="interactive-row grid-trigger" id="row-grid">
+                    <label>网格线</label>
+                    <input type="checkbox" id="i-show-grid">
+                </div>
+                <div id="grid-expansion" class="grid-expansion">
+                    <div class="interactive-row" id="row-grid-color" style="flex: 1; padding: 5px;">
+                        <label style="font-size: 0.6rem;">颜色</label>
+                        <input type="color" id="i-grid-color" value="#ffffff">
+                    </div>
+                    <div style="flex: 2; padding-right: 5px;">
+                        <div class="label-row" style="margin-bottom:2px"><label>透明度</label><span class="val" id="v-grid-op" style="font-size: 0.6rem;">20%</span></div>
+                        <input type="range" id="i-grid-op" min="0" max="100" value="20">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-export" id="btn-dl">下载为 PNG 图片</button>
+</aside>
+
+<main class="viewport" id="vp">
+    <canvas id="canvas"></canvas>
+    <div class="res-tag" id="dim-info">1920 × 1080 PX</div>
+</main>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const sidebar = document.getElementById('sidebar');
+    const vp = document.getElementById('vp');
+
+    const ui = {
+        w: document.getElementById('i-w'),
+        h: document.getElementById('i-h'),
+        lock: document.getElementById('btn-lock'),
+        size: document.getElementById('i-size'),
+        rotS: document.getElementById('i-rot-s'),
+        rotE: document.getElementById('i-rot-e'),
+        gradDir: document.getElementById('i-grad-dir'),
+        gapS: document.getElementById('i-gap-s'),
+        gapE: document.getElementById('i-gap-e'),
+        fg: document.getElementById('i-fg'),
+        fgOp: document.getElementById('i-fg-op'),
+        bg: document.getElementById('i-bg'),
+        trans: document.getElementById('i-trans'),
+        showGrid: document.getElementById('i-show-grid'),
+        gridColor: document.getElementById('i-grid-color'),
+        gridOp: document.getElementById('i-grid-op'),
+        vSize: document.getElementById('v-size'),
+        vRotS: document.getElementById('v-rot-s'),
+        vRotE: document.getElementById('v-rot-e'),
+        vGapS: document.getElementById('v-gap-s'),
+        vGapE: document.getElementById('v-gap-e'),
+        vGridOp: document.getElementById('v-grid-op'),
+        vFgOp: document.getElementById('v-fg-op'),
+        dimInfo: document.getElementById('dim-info'),
+        gridExpansion: document.getElementById('grid-expansion')
+    };
+
+    function snapValue(value, step = 45, threshold = 5) {
+        const val = parseFloat(value);
+        const closest = Math.round(val / step) * step;
+        return Math.abs(val - closest) <= threshold ? closest : val;
+    }
+
+    function getContrastYIQ(hexcolor){
+        hexcolor = hexcolor.replace("#", "");
+        var r = parseInt(hexcolor.substr(0,2),16);
+        var g = parseInt(hexcolor.substr(2,2),16);
+        var b = parseInt(hexcolor.substr(4,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000' : '#fff';
+    }
+
+    function updateRowVisual(rowId, type, isActive, colorVal = null) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+
+        if (type === 'border') {
+            if (isActive) row.classList.add('is-active-border');
+            else row.classList.remove('is-active-border');
+        } 
+        
+        if (isActive && colorVal) {
+            row.style.backgroundColor = colorVal;
+            row.style.color = getContrastYIQ(colorVal);
+            row.classList.add('is-active-fill');
+        } else {
+            row.style.backgroundColor = '';
+            row.style.color = '';
+            row.classList.remove('is-active-fill');
+        }
+    }
+
+    function drawStar(ctx, x, y, size, color, rot, opacity) {
+        if (size <= 0.5) return;
+        const r = size / 2;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.arc(r, -r, r, Math.PI, Math.PI * 0.5, true);
+        ctx.arc(r, r, r, Math.PI * 1.5, Math.PI, true);
+        ctx.arc(-r, r, r, 0, Math.PI * 1.5, true);
+        ctx.arc(-r, -r, r, Math.PI * 0.5, 0, true);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function render() {
+        const W = parseInt(ui.w.value) || 100;
+        const H = parseInt(ui.h.value) || 100;
+        const gs = parseInt(ui.size.value);
+        const mode = ui.gradDir.value;
+        const isFixed = mode === 'none';
+        
+        canvas.width = W;
+        canvas.height = H;
+        ui.dimInfo.innerText = `${W} × ${H} PX`;
+
+        ctx.clearRect(0, 0, W, H);
+        if (!ui.trans.checked) {
+            ctx.fillStyle = ui.bg.value;
+            ctx.fillRect(0, 0, W, H);
+            vp.classList.remove('is-trans');
+        } else {
+            vp.classList.add('is-trans');
+        }
+
+        const cols = Math.floor(W / gs);
+        const rows = Math.floor(H / gs);
+        const offsetX = (W - (cols - 1) * gs) / 2;
+        const offsetY = (H - (rows - 1) * gs) / 2;
+        const cX = (cols - 1) / 2;
+        const cY = (rows - 1) / 2;
+        const maxD = Math.sqrt(cX**2 + cY**2) || 1;
+
+        if (ui.showGrid.checked) {
+            ctx.save();
+            ctx.strokeStyle = ui.gridColor.value;
+            ctx.globalAlpha = parseInt(ui.gridOp.value) / 100;
+            ctx.beginPath();
+            for(let i=0; i < cols; i++) { 
+                const x = offsetX + i * gs - (gs / 2);
+                ctx.moveTo(x, 0); ctx.lineTo(x, H); 
+                if(i === cols - 1) { 
+                    const lastX = offsetX + i * gs + (gs / 2);
+                    ctx.moveTo(lastX, 0); ctx.lineTo(lastX, H);
+                }
+            }
+            for(let j=0; j < rows; j++) { 
+                const y = offsetY + j * gs - (gs / 2);
+                ctx.moveTo(0, y); ctx.lineTo(W, y); 
+                if(j === rows - 1) { 
+                    const lastY = offsetY + j * gs + (gs / 2);
+                    ctx.moveTo(0, lastY); ctx.lineTo(W, lastY);
+                }
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        const starOpacity = parseInt(ui.fgOp.value) / 100;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                let t = 0;
+                if (!isFixed) {
+                    if (mode === 'x') t = c / (cols - 1 || 1);
+                    else if (mode === 'y') t = r / (rows - 1 || 1);
+                    else if (mode === 'radial') t = Math.sqrt((c-cX)**2 + (r-cY)**2) / maxD;
+                    else if (mode === 'radial-inv') t = 1 - (Math.sqrt((c-cX)**2 + (r-cY)**2) / maxD);
+                    t = Math.max(0, Math.min(1, t));
+                }
+
+                const gapS = parseInt(ui.gapS.value);
+                const gapE = isFixed ? gapS : parseInt(ui.gapE.value);
+                const scaleFactor = 1 - (gapS + (gapE - gapS) * t) / 100;
+                const size = gs * Math.max(0, scaleFactor);
+
+                const degS = parseFloat(ui.rotS.value);
+                const degE = isFixed ? degS : parseFloat(ui.rotE.value);
+                const curRot = (degS + (degE - degS) * t) * Math.PI / 180;
+
+                drawStar(ctx, offsetX + c * gs, offsetY + r * gs, size, ui.fg.value, curRot, starOpacity);
+            }
+        }
+    }
+
+    function trigger(e) {
+        if(e && e.target && e.target.type === 'range') {
+            e.target.value = snapValue(e.target.value);
+        }
+
+        const isFixed = ui.gradDir.value === 'none';
+        sidebar.classList.toggle('mode-fixed', isFixed);
+
+        ui.vSize.innerText = ui.size.value;
+        ui.vRotS.innerText = ui.rotS.value + '°';
+        ui.vRotE.innerText = ui.rotE.value + '°';
+        ui.vGapS.innerText = ui.gapS.value + '%';
+        ui.vGapE.innerText = ui.gapE.value + '%';
+        ui.vGridOp.innerText = ui.gridOp.value + '%';
+        ui.vFgOp.innerText = ui.fgOp.value + '%';
+        
+        ui.gridExpansion.classList.toggle('expanded', ui.showGrid.checked);
+
+        updateRowVisual('row-bg', 'border', !ui.trans.checked, !ui.trans.checked ? ui.bg.value : null);
+        updateRowVisual('row-trans', 'border', ui.trans.checked);
+        updateRowVisual('row-grid', 'border', ui.showGrid.checked);
+        updateRowVisual('row-fg', 'fill', true, ui.fg.value);
+        updateRowVisual('row-grid-color', 'fill', true, ui.gridColor.value);
+
+        render();
+    }
+
+    document.querySelectorAll('.interactive-row').forEach(row => {
+        const colorInput = row.querySelector('input[type="color"]');
+        const checkInput = row.querySelector('input[type="checkbox"]');
+
+        if(colorInput) {
+            colorInput.oninput = () => {
+                if (row.id === 'row-bg') ui.trans.checked = false; 
+                trigger();
+            };
+        }
+
+        row.onclick = (e) => {
+            if (e.target.type === 'color') return;
+            if (row.id === 'row-bg') {
+                ui.trans.checked = false;
+            } else if (row.id === 'row-trans') {
+                ui.trans.checked = true;
+            } else if (checkInput) {
+                checkInput.checked = !checkInput.checked;
+            }
+            trigger();
+        };
+    });
+
+    let isLocked = false;
+    let ratio = 16/9;
+    ui.lock.onclick = (e) => { 
+        isLocked = !isLocked; 
+        ui.lock.classList.toggle('active', isLocked); 
+        ratio = ui.w.value / ui.h.value; 
+    };
+    ui.w.oninput = () => { if(isLocked) ui.h.value = Math.round(ui.w.value / ratio); trigger(); };
+    ui.h.oninput = () => { if(isLocked) ui.w.value = Math.round(ui.h.value * ratio); trigger(); };
+
+    [ui.size, ui.rotS, ui.rotE, ui.gradDir, ui.gapS, ui.gapE, ui.fg, ui.fgOp, ui.bg, ui.trans, ui.showGrid, ui.gridColor, ui.gridOp].forEach(input => {
+        input.addEventListener('input', trigger);
+    });
+
+    document.getElementById('btn-dl').onclick = () => {
+        const link = document.createElement('a');
+        link.download = `star-grid-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    };
+
+    trigger();
+</script>
+
+</body>
+</html>

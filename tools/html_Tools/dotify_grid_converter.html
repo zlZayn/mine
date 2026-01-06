@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>波点艺术生成器 Pro</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+            --card-bg: rgba(30, 41, 59, 0.5);
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --radius: 10px;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- 左侧压缩面板 --- */
+        .sidebar {
+            width: 320px;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 0 0 12px 0;
+            text-align: center;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .upload-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .upload-zone:hover { border-color: var(--primary); }
+        .upload-zone svg { width: 24px; height: 24px; fill: var(--text-dim); margin-bottom: 4px; }
+        #fileName { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .group {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+        .group-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 网格布局：一行两列 */
+        .compact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .control-item { margin-bottom: 8px; }
+        .label-box { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.75rem; }
+        .val { color: var(--primary); font-weight: 600; font-family: monospace; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%; height: 3px;
+            background: #334155;
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            background: #fff; border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* 紧凑开关 */
+        .bg-switch {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            background: #0f172a;
+            padding: 2px;
+            border-radius: 6px;
+        }
+        .bg-switch label { text-align: center; font-size: 0.7rem; padding: 4px 0; cursor: pointer; color: var(--text-dim); }
+        .bg-switch input { display: none; }
+        .bg-switch input:checked + span { background: #334155; color: #fff; display: block; border-radius: 4px; }
+
+        .btn-main {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: all 0.2s;
+        }
+        .btn-main:hover { filter: brightness(1.1); }
+        .btn-main:disabled { background: #334155; cursor: not-allowed; opacity: 0.5; }
+
+        /* --- 预览区 --- */
+        .preview {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                linear-gradient(45deg, #2d3a4f 25%, transparent 25%), 
+                linear-gradient(-45deg, #2d3a4f 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #2d3a4f 75%), 
+                linear-gradient(-45deg, transparent 75%, #2d3a4f 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            background-color: #1e293b; 
+            overflow: auto;
+        }
+
+        canvas { max-width: 95%; max-height: 95%; background-color: transparent; }
+        
+        .loader { 
+            position: absolute; bottom: 20px; right: 20px; 
+            background: rgba(0,0,0,0.8); padding: 8px 16px; 
+            border-radius: 100px; font-size: 0.75rem; 
+            display: none; border: 1px solid var(--primary); 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1>Dotify Art Pro</h1>
+        
+        <div class="upload-zone" onclick="document.getElementById('fileIn').click()">
+            <svg viewBox="0 0 24 24"><path d="M11 16V7.85l-2.6 2.6L7 9l5-5 5 5-1.4 1.45-2.6-2.6V16h-2ZM6 20q-.825 0-1.412-.587Q4 18.825 4 18v-3h2v3h12v-3h2v3q0 .825-.587 1.413Q18.825 20 18 20H6Z"/></svg>
+            <div id="fileName">导入图像</div>
+            <input type="file" id="fileIn" hidden accept="image/*">
+        </div>
+
+        <div class="group">
+            <div class="group-title">核心参数</div>
+            <div class="control-item">
+                <div class="label-box">密度 <span class="val" id="v-grid">0.01</span></div>
+                <input type="range" id="i-grid" min="0.005" max="0.04" step="0.001" value="0.01">
+            </div>
+            <div class="compact-grid">
+                <div class="control-item">
+                    <div class="label-box">暗部(Max) <span class="val" id="v-max">0.3</span></div>
+                    <input type="range" id="i-max" min="-1.0" max="2.0" step="0.1" value="0.3">
+                </div>
+                <div class="control-item">
+                    <div class="label-box">亮部(Min) <span class="val" id="v-min">1.2</span></div>
+                    <input type="range" id="i-min" min="-1.0" max="2.0" step="0.1" value="1.2">
+                </div>
+            </div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">色彩与亮度</div>
+            <div class="control-item">
+                <div class="label-box">亮度修正 <span class="val" id="v-bright">1.0</span></div>
+                <input type="range" id="i-bright" min="0.5" max="2.0" step="0.05" value="1.0">
+            </div>
+            <div class="control-item">
+                <div class="label-box">饱和度 <span class="val" id="v-satur">1.0</span></div>
+                <input type="range" id="i-satur" min="0.0" max="2.0" step="0.05" value="1.0">
+            </div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">视觉风格</div>
+            <div class="control-item" style="margin-bottom: 12px;">
+                <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 0.8rem;">
+                    <span>保留原图色彩</span>
+                    <input type="checkbox" id="i-color" checked style="width:14px;height:14px;accent-color:var(--primary)">
+                </label>
+            </div>
+            <div class="control-item">
+                <div class="label-box">选择背景</div>
+                <div class="bg-switch">
+                    <label><input type="radio" name="bg" id="bg-trans" value="trans" checked><span>无</span></label>
+                    <label><input type="radio" name="bg" id="bg-black" value="black"><span>黑</span></label>
+                    <label><input type="radio" name="bg" id="bg-white" value="white"><span>白</span></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">输出控制</div>
+            <div class="control-item">
+                <div class="label-box">清晰度倍率 <span class="val" id="v-scale">2x</span></div>
+                <input type="range" id="i-scale" min="1" max="10" step="1" value="2">
+            </div>
+        </div>
+
+        <button class="btn-main" id="btn-dl" disabled>导出图像</button>
+    </div>
+
+    <div class="preview" id="p-container">
+        <canvas id="mainCanvas"></canvas>
+        <div class="loader" id="loader">处理中...</div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let sourceImg = null;
+    let isRendering = false;
+
+    const controls = ['grid', 'max', 'min', 'scale', 'bright', 'satur'].reduce((acc, cur) => {
+        acc[cur] = document.getElementById('i-' + cur);
+        acc[cur + 'V'] = document.getElementById('v-' + cur);
+        return acc;
+    }, {});
+    const iColor = document.getElementById('i-color');
+
+    document.getElementById('fileIn').onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        document.getElementById('fileName').textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = event => {
+            const img = new Image();
+            img.onload = () => { 
+                sourceImg = img; 
+                document.getElementById('btn-dl').disabled = false; 
+                startRender(); 
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const setPreviewBg = (type) => {
+        const p = document.getElementById('p-container');
+        p.style.backgroundImage = type === 'trans' ? '' : 'none';
+        p.style.backgroundColor = type === 'black' ? '#000' : (type === 'white' ? '#fff' : '');
+    };
+
+    document.querySelectorAll('input[name="bg"]').forEach(r => {
+        r.onchange = e => setPreviewBg(e.target.value);
+    });
+
+    // 辅助函数：调整饱和度
+    function adjustSatur(r, g, b, s) {
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        return [
+            Math.max(0, Math.min(255, gray + (r - gray) * s)),
+            Math.max(0, Math.min(255, gray + (g - gray) * s)),
+            Math.max(0, Math.min(255, gray + (b - gray) * s))
+        ];
+    }
+
+    async function startRender() {
+        if (!sourceImg || isRendering) return;
+        isRendering = true;
+        document.getElementById('loader').style.display = 'block';
+
+        const gridRatio = parseFloat(controls.grid.value);
+        const maxDot = parseFloat(controls.max.value);
+        const minDot = parseFloat(controls.min.value);
+        const scale = parseInt(controls.scale.value);
+        const brightMul = parseFloat(controls.bright.value);
+        const saturMul = parseFloat(controls.satur.value);
+        const useColor = iColor.checked;
+
+        const w = sourceImg.width;
+        const h = sourceImg.height;
+        const gridSize = Math.max(2, Math.floor(Math.min(w, h) * gridRatio));
+        
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const offscreen = new OffscreenCanvas(w, h);
+        const oCtx = offscreen.getContext('2d');
+        oCtx.drawImage(sourceImg, 0, 0);
+        const pixels = oCtx.getImageData(0, 0, w, h).data;
+
+        const rows = Math.ceil(h / gridSize);
+        const cols = Math.ceil(w / gridSize);
+
+        for (let r = 0; r < rows; r++) {
+            if (r % 25 === 0) await new Promise(res => setTimeout(res, 0));
+
+            for (let c = 0; c < cols; c++) {
+                const x = c * gridSize;
+                const y = r * gridSize;
+                
+                let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                for (let iy = 0; iy < gridSize; iy += 2) {
+                    for (let ix = 0; ix < gridSize; ix += 2) {
+                        const px = x + ix;
+                        const py = y + iy;
+                        if (px < w && py < h) {
+                            const i = (py * w + px) * 4;
+                            rSum += pixels[i];
+                            gSum += pixels[i+1];
+                            bSum += pixels[i+2];
+                            count++;
+                        }
+                    }
+                }
+
+                let ravg = (rSum / count) * brightMul;
+                let gavg = (gSum / count) * brightMul;
+                let bavg = (bSum / count) * brightMul;
+
+                // 应用饱和度
+                if (saturMul !== 1.0) {
+                    [ravg, gavg, bavg] = adjustSatur(ravg, gavg, bavg, saturMul);
+                }
+
+                const brightness = (0.299 * ravg + 0.587 * gavg + 0.114 * bavg) / 255;
+                const sizeRatio = maxDot + (minDot - maxDot) * brightness;
+                const radius = (gridSize * scale * sizeRatio) / 2;
+                
+                if (radius <= 0.1) continue; 
+
+                const cx = (x + gridSize/2) * scale;
+                const cy = (y + gridSize/2) * scale;
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = useColor ? `rgb(${ravg},${gavg},${bavg})` : '#000';
+                ctx.fill();
+            }
+        }
+
+        document.getElementById('loader').style.display = 'none';
+        isRendering = false;
+    }
+
+    const updateVal = () => {
+        controls.gridV.textContent = controls.grid.value;
+        controls.maxV.textContent = controls.max.value;
+        controls.minV.textContent = controls.min.value;
+        controls.scaleV.textContent = controls.scale.value + 'x';
+        controls.brightV.textContent = controls.bright.value;
+        controls.saturV.textContent = controls.satur.value;
+    };
+
+    [controls.grid, controls.max, controls.min, controls.scale, controls.bright, controls.satur, iColor].forEach(el => {
+        el.oninput = () => {
+            updateVal();
+            clearTimeout(window.renderTimer);
+            window.renderTimer = setTimeout(startRender, 150);
+        };
+    });
+
+    document.getElementById('btn-dl').onclick = () => {
+        const selectedBg = document.querySelector('input[name="bg"]:checked').value;
+        const link = document.createElement('a');
+        link.download = `dotify-${selectedBg}-${Date.now()}.png`;
+        
+        if (selectedBg === 'trans') {
+            link.href = canvas.toDataURL('image/png');
+        } else {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.fillStyle = selectedBg === 'black' ? '#000' : '#fff';
+            tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tCtx.drawImage(canvas, 0, 0);
+            link.href = tempCanvas.toDataURL('image/png');
+        }
+        link.click();
+    };
+</script>
+</body>
+</html>

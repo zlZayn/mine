@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>全能镜像工坊</title>
+    <style>
+        :root { --bg: #111; --panel: #1e1e1e; --accent: #0A84FF; --line: #FF3B30; --success: #34C759; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: white; font-family: -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header {
+            height: 50px; background: var(--panel); border-bottom: 1px solid #333;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0;
+        }
+        .btn { background: var(--accent); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.7; }
+        .btn-grey { background: #333; }
+        .btn-apply { background: var(--success); }
+
+        .workspace {
+            flex: 1; display: flex; overflow: hidden; position: relative;
+            padding: 10px; gap: 10px;
+        }
+        
+        .viewport {
+            flex: 1; background: #000; border: 1px solid #333; border-radius: 8px;
+            position: relative; overflow: hidden; display: flex; flex-direction: column;
+        }
+        
+        .viewport-title {
+            position: absolute; top: 8px; left: 8px; font-size: 11px; 
+            background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; color: #aaa; z-index: 10; pointer-events: none;
+        }
+
+        canvas {
+            width: 100%; height: 100%; 
+            object-fit: contain;
+            touch-action: none; cursor: crosshair;
+        }
+
+        .footer {
+            min-height: 80px; background: var(--panel); border-top: 1px solid #333;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px;
+        }
+
+        .button-group { display: flex; gap: 8px; }
+
+        .mode-btn {
+            background: transparent; border: 1px solid #444; color: #888; 
+            padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+        }
+        .mode-btn.active { background: #444; color: white; border-color: var(--accent); }
+
+        @media (max-width: 600px) {
+            .workspace { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="font-weight:600; font-size:14px;">全能镜像工坊</div>
+    <div style="display: flex; gap: 8px;">
+        <input type="file" id="upload" accept="image/*" style="display:none">
+        <button class="btn btn-grey" onclick="document.getElementById('upload').click()">打开</button>
+        <button class="btn btn-apply" id="applyBtn">应用并继续</button>
+        <button class="btn" id="exportBtn">导出高清图</button>
+    </div>
+</div>
+
+<div class="workspace">
+    <div class="viewport">
+        <div class="viewport-title">原图/基准线 (可拖动红线)</div>
+        <canvas id="sourceCanvas"></canvas>
+    </div>
+    <div class="viewport">
+        <div class="viewport-title">实时预览</div>
+        <canvas id="resultCanvas"></canvas>
+        <div id="tip" style="position:absolute; top:50%; width:100%; text-align:center; color:#555; pointer-events:none;">请先上传图片</div>
+    </div>
+</div>
+
+<div class="footer">
+    <div class="button-group">
+        <button class="mode-btn active" data-dir="v" data-mode="top">上下:保留上</button>
+        <button class="mode-btn" data-dir="v" data-mode="bottom">上下:保留下</button>
+    </div>
+    <div class="button-group">
+        <button class="mode-btn" data-dir="h" data-mode="left">左右:保留左</button>
+        <button class="mode-btn" data-dir="h" data-mode="right">左右:保留右</button>
+    </div>
+</div>
+
+<script>
+    const sCvs = document.getElementById('sourceCanvas');
+    const rCvs = document.getElementById('resultCanvas');
+    const sCtx = sCvs.getContext('2d');
+    const rCtx = rCvs.getContext('2d');
+    
+    let img = null;
+    let axisPos = 0; 
+    let dir = 'v';   
+    let mode = 'top';
+
+    // 图片上传处理
+    document.getElementById('upload').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const tempImg = new Image();
+            tempImg.onload = () => {
+                img = tempImg;
+                initCanvas();
+            };
+            tempImg.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    function initCanvas() {
+        document.getElementById('tip').style.display = 'none';
+        sCvs.width = rCvs.width = img.width;
+        sCvs.height = rCvs.height = img.height;
+        axisPos = (dir === 'v') ? img.height / 2 : img.width / 2;
+        drawAll();
+    }
+
+    // 核心渲染：原图线稿与镜像合成
+    function drawAll() {
+        if (!img) return;
+
+        // 1. 绘制左侧原图及红基准线
+        sCtx.clearRect(0, 0, sCvs.width, sCvs.height);
+        sCtx.drawImage(img, 0, 0);
+        sCtx.beginPath();
+        if (dir === 'v') {
+            sCtx.moveTo(0, axisPos); sCtx.lineTo(sCvs.width, axisPos);
+        } else {
+            sCtx.moveTo(axisPos, 0); sCtx.lineTo(axisPos, sCvs.height);
+        }
+        sCtx.strokeStyle = '#FF3B30';
+        sCtx.lineWidth = Math.max(3, (dir === 'v' ? img.height : img.width) / 300);
+        sCtx.stroke();
+
+        // 2. 计算并绘制右侧镜像预览
+        rCtx.clearRect(0, 0, rCvs.width, rCvs.height);
+        rCtx.save();
+        
+        if (dir === 'v') {
+            if (mode === 'top') {
+                rCtx.drawImage(img, 0, 0, img.width, axisPos, 0, 0, img.width, axisPos);
+                rCtx.scale(1, -1);
+                rCtx.drawImage(img, 0, 0, img.width, axisPos, 0, -axisPos * 2, img.width, axisPos);
+            } else {
+                let h = img.height - axisPos;
+                rCtx.drawImage(img, 0, axisPos, img.width, h, 0, axisPos, img.width, h);
+                rCtx.scale(1, -1);
+                rCtx.drawImage(img, 0, axisPos, img.width, h, 0, -axisPos, img.width, h);
+            }
+        } else {
+            if (mode === 'left') {
+                rCtx.drawImage(img, 0, 0, axisPos, img.height, 0, 0, axisPos, img.height);
+                rCtx.scale(-1, 1);
+                rCtx.drawImage(img, 0, 0, axisPos, img.height, -axisPos * 2, 0, axisPos, img.height);
+            } else {
+                let w = img.width - axisPos;
+                rCtx.drawImage(img, axisPos, 0, w, img.height, axisPos, 0, w, img.height);
+                rCtx.scale(-1, 1);
+                rCtx.drawImage(img, axisPos, 0, w, img.height, -axisPos, 0, w, img.height);
+            }
+        }
+        rCtx.restore();
+    }
+
+    // 应用当前状态：将预览图转为新原图实现连续操作
+    document.getElementById('applyBtn').onclick = () => {
+        if (!img) return;
+        
+        const tempImg = new Image();
+        tempImg.onload = () => {
+            img = tempImg;
+            axisPos = (dir === 'v') ? img.height / 2 : img.width / 2;
+            drawAll();
+            
+            // UI 反馈
+            const btn = document.getElementById('applyBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "已应用";
+            setTimeout(() => btn.innerText = originalText, 800);
+        };
+        tempImg.src = rCvs.toDataURL('image/png');
+    };
+
+    // 鼠标/触摸交互逻辑
+    function handleInput(e, canvasElement) {
+        if (!img) return;
+        e.preventDefault();
+        const rect = canvasElement.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const canvasRatio = canvasElement.width / canvasElement.height;
+        const rectRatio = rect.width / rect.height;
+
+        if (dir === 'v') {
+            let scaleY = (canvasRatio > rectRatio) ? rect.width / canvasElement.width : rect.height / canvasElement.height;
+            let offsetY = (rect.height - (canvasElement.height * scaleY)) / 2;
+            axisPos = (clientY - rect.top - offsetY) / scaleY;
+            axisPos = Math.max(0, Math.min(axisPos, img.height));
+        } else {
+            let scaleX = (canvasRatio > rectRatio) ? rect.width / canvasElement.width : rect.height / canvasElement.height;
+            let offsetX = (rect.width - (canvasElement.width * scaleX)) / 2;
+            axisPos = (clientX - rect.left - offsetX) / scaleX;
+            axisPos = Math.max(0, Math.min(axisPos, img.width));
+        }
+        drawAll();
+    }
+
+    // 事件监听绑定
+    [sCvs, rCvs].forEach(cvs => {
+        const moveHandler = (e) => handleInput(e, cvs);
+        cvs.addEventListener('mousedown', () => {
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', () => document.removeEventListener('mousemove', moveHandler), {once: true});
+        });
+        cvs.addEventListener('touchstart', (e) => {
+            document.addEventListener('touchmove', moveHandler, {passive: false});
+            document.addEventListener('touchend', () => document.removeEventListener('touchmove', moveHandler), {once: true});
+        }, {passive: false});
+    });
+
+    // 模式切换按钮逻辑
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            dir = e.target.dataset.dir;
+            mode = e.target.dataset.mode;
+            if (img) axisPos = (dir === 'v') ? img.height / 2 : img.width / 2;
+            drawAll();
+        };
+    });
+
+    // 导出结果图
+    document.getElementById('exportBtn').onclick = () => {
+        if (!img) return;
+        const link = document.createElement('a');
+        link.download = `Mirror_Work_${Date.now()}.png`;
+        link.href = rCvs.toDataURL('image/png', 1.0);
+        link.click();
+    };
+</script>
+</body>
+</html>

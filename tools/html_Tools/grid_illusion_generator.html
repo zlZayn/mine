@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Master Pro - Star Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #020617;
+            --bg-panel: rgba(15, 23, 42, 0.95);
+            --bg-card: rgba(30, 41, 59, 0.5);
+            --primary: #fbbf24;
+            --primary-glow: rgba(251, 191, 36, 0.4);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-md: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 340px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 16px; z-index: 100;
+            overflow-y: auto; gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .logo-area h1 { 
+            font-size: 1rem; margin: 0; font-weight: 800; 
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        }
+
+        .section-tag { 
+            font-size: 0.65rem; font-weight: 800; color: var(--text-muted); 
+            text-transform: uppercase; letter-spacing: 0.1em; margin: 4px 0 -4px 4px; 
+        }
+
+        .card { 
+            background: var(--bg-card); 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .card-inner { padding: 12px; }
+
+        .interactive-row {
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.2); 
+            padding: 10px; cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            min-height: 38px;
+        }
+        .interactive-row label { cursor: pointer; font-size: 0.75rem; font-weight: 700; z-index: 1; pointer-events: none; }
+        .interactive-row input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .label-row label { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); }
+        .val { font-family: 'JetBrains Mono'; font-size: 0.65rem; color: var(--primary); }
+
+        .select-wrapper { position: relative; width: 100%; margin-top: 4px; }
+        .select-wrapper::after {
+            content: ""; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            border-left: 4px solid transparent; border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-muted); pointer-events: none;
+        }
+        
+        select { 
+            width: 100%; background: var(--bg-deep); border: 1px solid var(--border); 
+            color: #fff; padding: 6px 8px; border-radius: 4px; font-size: 0.7rem; 
+            font-family: inherit; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+            color-scheme: dark;
+        }
+
+        input[type="range"] { 
+            -webkit-appearance: none; width: 100%; height: 3px; 
+            background: rgba(255,255,255,0.1); border-radius: 10px; 
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 10px; height: 10px; 
+            background: #fff; border-radius: 50%; border: 2px solid var(--primary); 
+            cursor: pointer;
+        }
+        input[type="range"]:disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .disabled-label { opacity: 0.3; }
+
+        .btn-export { 
+            width: 100%; background: var(--primary); color: #451a03; border: none; 
+            padding: 12px; border-radius: var(--radius-md); font-weight: 800; 
+            font-size: 0.75rem; cursor: pointer; margin-top: auto; transition: var(--transition);
+        }
+        .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+
+        /* 视口区域 - 核心：解决溢出预览问题 */
+        .viewport { 
+            flex: 1; background: #000; display: flex; 
+            align-items: center; justify-content: center; 
+            overflow: hidden; /* 关键：裁剪掉溢出部分 */
+            position: relative;
+            padding: 40px;
+        }
+        .viewport::before {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+        }
+
+        /* 画布容器：通过 JS 动态控制缩放 */
+        .canvas-scaler {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas { 
+            display: block; 
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            background-image: linear-gradient(45deg, #0f172a 25%, transparent 25%), linear-gradient(-45deg, #0f172a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #0f172a 75%), linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+            background-size: 20px 20px;
+        }
+
+        .dim-tag {
+            position: absolute; bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.6); color: var(--text-muted);
+            font-family: 'JetBrains Mono'; font-size: 0.6rem;
+            padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo-area">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--primary)"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.5-6.2 4.5 2.3-7.3-6.1-4.5h7.6z"/></svg>
+        <h1>MATRIX MASTER</h1>
+    </div>
+
+    <div class="section-tag">阵列规模 (4x4 组)</div>
+    <div class="card"><div class="card-inner">
+        <div class="label-row"><label>单方格边长 (导出精度)</label><span class="val" id="v-cellSize">24 px</span></div>
+        <input type="range" id="i-cellSize" min="4" max="200" value="30">
+
+        <div style="margin-top:12px">
+            <div class="label-row"><label>水平组数 (X)</label><span class="val" id="v-unitX">10</span></div>
+            <input type="range" id="i-unitX" min="1" max="50" value="10">
+        </div>
+        
+        <div style="margin-top:12px">
+            <div class="label-row"><label>垂直组数 (Y)</label><span class="val" id="v-unitY">6</span></div>
+            <input type="range" id="i-unitY" min="1" max="50" value="6">
+        </div>
+    </div></div>
+
+    <div class="section-tag">几何样式 (Shape)</div>
+    <div class="card"><div class="card-inner">
+        <div class="label-row"><label>元素形状</label></div>
+        <div class="select-wrapper">
+            <select id="i-shape">
+                <option value="cross">经典十字 (Cross)</option>
+                <option value="star">四角星星 (Star)</option>
+            </select>
+        </div>
+
+        <div style="margin-top:12px" id="container-thin">
+            <div class="label-row"><label id="l-thin">纤细度 (Thickness)</label><span class="val" id="v-thin">10%</span></div>
+            <input type="range" id="i-thin" min="1" max="100" value="10">
+        </div>
+        
+        <div style="margin-top:12px">
+            <div class="label-row"><label>尺寸比例 (Size)</label><span class="val" id="v-csize">30%</span></div>
+            <input type="range" id="i-csize" min="0" max="100" value="30">
+        </div>
+    </div></div>
+
+    <div class="section-tag">色彩方案</div>
+    <div class="card">
+        <div class="interactive-row" id="row-cb1"><label>方块 A</label><input type="color" id="i-cb1" value="#ffc7f3"></div>
+        <div class="interactive-row" id="row-cb2" style="border-top: 1px solid var(--border)"><label>方块 B</label><input type="color" id="i-cb2" value="#da1fff"></div>
+        <div class="interactive-row" id="row-cc1" style="border-top: 1px solid var(--border)"><label>装饰 1</label><input type="color" id="i-cc1" value="#5f761e"></div>
+        <div class="interactive-row" id="row-cc2" style="border-top: 1px solid var(--border)"><label>装饰 2</label><input type="color" id="i-cc2" value="#ffffff"></div>
+    </div>
+
+    <button class="btn-export" id="btn-export">下载高清 PNG 图片</button>
+</aside>
+
+<main class="viewport" id="viewport">
+    <div class="canvas-scaler" id="scaler">
+        <canvas id="canvas"></canvas>
+    </div>
+    <div class="dim-tag" id="v-dim">0 × 0 PX</div>
+</main>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const scaler = document.getElementById('scaler');
+    const viewport = document.getElementById('viewport');
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    const ui = {
+        cellSize: document.getElementById('i-cellSize'),
+        unitX: document.getElementById('i-unitX'),
+        unitY: document.getElementById('i-unitY'),
+        thin: document.getElementById('i-thin'),
+        csize: document.getElementById('i-csize'),
+        shape: document.getElementById('i-shape'),
+        cb1: document.getElementById('i-cb1'),
+        cb2: document.getElementById('i-cb2'),
+        cc1: document.getElementById('i-cc1'),
+        cc2: document.getElementById('i-cc2'),
+        exportBtn: document.getElementById('btn-export')
+    };
+
+    const M1 = [
+        [0, 1, 1, 0],
+        [1, 0, 1, 1],
+        [0, 1, 0, 1],
+        [0, 0, 1, 0]
+    ];
+
+    const safeMod = (n, m) => ((n % m) + m) % m;
+
+    function getContrastYIQ(hexcolor){
+        hexcolor = hexcolor.replace("#", "");
+        var r = parseInt(hexcolor.substr(0,2),16);
+        var g = parseInt(hexcolor.substr(2,2),16);
+        var b = parseInt(hexcolor.substr(4,2),16);
+        return ((r*299)+(g*587)+(b*114))/1000 >= 128 ? '#000' : '#fff';
+    }
+
+    function drawShape(x, y, size, thickness, color, type) {
+        ctx.fillStyle = color;
+        if (type === 'cross') {
+            const hW = Math.round(size);
+            const hH = Math.round(thickness);
+            ctx.fillRect(Math.round(x - hW/2), Math.round(y - hH/2), hW, hH);
+            ctx.fillRect(Math.round(x - hH/2), Math.round(y - hW/2), hH, hW);
+        } else {
+            const r = size / 2;
+            if (r <= 0) return;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.beginPath();
+            ctx.moveTo(0, -r);
+            ctx.arc(r, -r, r, Math.PI, Math.PI * 0.5, true);
+            ctx.arc(r, r, r, Math.PI * 1.5, Math.PI, true);
+            ctx.arc(-r, r, r, 0, Math.PI * 1.5, true);
+            ctx.arc(-r, -r, r, Math.PI * 0.5, 0, true);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function render() {
+        const S = parseInt(ui.cellSize.value);
+        const ux = parseInt(ui.unitX.value);
+        const uy = parseInt(ui.unitY.value);
+        const totalX = ux * 4;
+        const totalY = uy * 4;
+        
+        const realW = S * totalX;
+        const realH = S * totalY;
+
+        canvas.width = realW;
+        canvas.height = realH;
+        document.getElementById('v-dim').innerText = `${realW} × ${realH} PX`;
+
+        // --- 核心缩放逻辑 ---
+        const padding = 60; // 预览边距
+        const availableW = viewport.clientWidth - padding;
+        const availableH = viewport.clientHeight - padding;
+        
+        // 计算缩放比例，取宽高缩放中较小的一个，确保不超出
+        const scale = Math.min(availableW / realW, availableH / realH, 1);
+        scaler.style.transform = `scale(${scale})`;
+
+        const cSizeRatio = parseInt(ui.csize.value) / 100;
+        const thinRatio = parseInt(ui.thin.value) / 100;
+        const CS = S * cSizeRatio;
+        const thickness = Math.max(1, S * thinRatio);
+
+        // 背景
+        for (let r = 0; r < totalY; r++) {
+            for (let c = 0; c < totalX; c++) {
+                ctx.fillStyle = (r + c) % 2 === 0 ? ui.cb1.value : ui.cb2.value;
+                ctx.fillRect(c * S, r * S, S, S);
+            }
+        }
+
+        // 装饰层
+        ctx.imageSmoothingEnabled = S > 20; // 小尺寸时不开启平滑
+        for (let r = 0; r <= totalY; r++) {
+            for (let c = 0; c <= totalX; c++) {
+                const lx = safeMod(c, 4);
+                const ly = safeMod(r, 4);
+                const bx = Math.floor(c / 4);
+                const by = Math.floor(r / 4);
+
+                let val = M1[ly][lx]; 
+                if ((bx + by) % 2 !== 0) val = 1 - val;
+
+                drawShape(
+                    c * S, r * S, CS, thickness, 
+                    val === 0 ? ui.cc1.value : ui.cc2.value, 
+                    ui.shape.value
+                );
+            }
+        }
+
+        updateUI();
+    }
+
+    function updateUI() {
+        const isStar = ui.shape.value === 'star';
+        ui.thin.disabled = isStar;
+        document.getElementById('l-thin').className = isStar ? 'disabled-label' : '';
+        document.getElementById('v-thin').style.opacity = isStar ? '0.2' : '1';
+
+        document.getElementById('v-cellSize').innerText = ui.cellSize.value + ' px';
+        document.getElementById('v-unitX').innerText = ui.unitX.value;
+        document.getElementById('v-unitY').innerText = ui.unitY.value;
+        document.getElementById('v-thin').innerText = ui.thin.value + '%';
+        document.getElementById('v-csize').innerText = ui.csize.value + '%';
+        
+        [ui.cb1, ui.cb2, ui.cc1, ui.cc2].forEach(el => {
+            const row = el.parentElement;
+            row.style.backgroundColor = el.value;
+            row.style.color = getContrastYIQ(el.value);
+        });
+    }
+
+    ui.exportBtn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = `matrix-star-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    };
+
+    // 窗口大小变化时重新计算缩放
+    window.onresize = render;
+
+    Object.values(ui).forEach(el => {
+        if (el.oninput !== undefined) el.oninput = render;
+    });
+    
+    ui.shape.onchange = render;
+
+    render();
+</script>
+
+</body>
+</html>
