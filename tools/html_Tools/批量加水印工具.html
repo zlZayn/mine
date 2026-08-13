@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批量加水印工具</title>
+<style>
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --green: #059669;
+  --green-hover: #047857;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --bg: #f3f4f6;
+  --card-bg: #fff;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  width: 100%;
+  max-width: 900px;
+  position: relative;
+  overflow: hidden;
+}
+
+h1 { font-size: 16px; font-weight: 700; }
+h1 small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ===== 上传区 ===== */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--bg);
+  padding: 36px 16px;
+  margin-top: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary-light), transparent 60%);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); }
+.upload-zone.dragover { background: var(--primary-light); }
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  margin-bottom: 8px;
+  position: relative;
+}
+.upload-text { color: var(--text-secondary); font-size: 13px; line-height: 1.6; position: relative; }
+.upload-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; position: relative; }
+
+/* ===== 图片网格（棋盘格背景预览透明） ===== */
+.count { margin-top: 16px; font-size: 12px; color: var(--text-secondary); }
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.img-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  position: relative;
+  background: #fff;
+}
+.img-thumb {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: contain;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: repeating-conic-gradient(#f1f3f5 0 25%, #fff 0 50%) 0 0/16px 16px;
+}
+.img-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.img-dims { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.img-rm {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17,24,39,.55);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.img-rm:hover { background: #dc2626; }
+
+/* ===== 工具栏 ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.toolbar-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.control-label { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.control { display: flex; align-items: center; gap: 8px; }
+.control-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 6px;
+  padding: 3px 8px;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 滑块 */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  cursor: pointer;
+}
+
+.seg { display: flex; align-items: center; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
+.seg button {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.seg button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-hover); box-shadow: 0 2px 8px rgba(5,150,101,.3); }
+.btn-green:disabled { background: #c4c9d4; box-shadow: none; cursor: not-allowed; }
+.btn-ghost { background: #fff; color: var(--text-secondary); border: 2px solid var(--border); padding: 9px 18px; }
+.btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-ghost:disabled { color: #c4c9d4; border-color: #d8dce4; cursor: not-allowed; }
+
+.status { margin-top: 12px; font-size: 12px; color: var(--text-secondary); min-height: 18px; }
+.status.done { color: var(--green); }
+
+footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--text-muted); }
+
+/* ===== 全屏拖拽遮罩 ===== */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.03);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s ease, visibility .3s ease, background .3s ease,
+              backdrop-filter .3s ease, -webkit-backdrop-filter .3s ease;
+}
+.drop-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  background: rgba(0,0,0,.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 36px 48px;
+  box-shadow: var(--shadow);
+  border: 2px dashed var(--primary);
+}
+.drop-overlay-icon { width: 44px; height: 44px; fill: none; stroke: var(--primary); stroke-width: 1.5; }
+.drop-overlay-text { font-size: 18px; font-weight: 700; color: var(--primary); }
+.drop-overlay-sub { font-size: 13px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>批量加水印工具<small>批量给图片打上透明水印，默认透明度 2%、水印为图短边的 20%，导出 PNG / JPG</small></h1>
+
+  <div class="upload-zone" id="dropZone">
+    <svg class="upload-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="upload-text">点击或拖拽图片到此处（可多选）</div>
+    <div class="upload-sub">支持 PNG / JPG / WebP，页面任意位置拖入也可</div>
+  </div>
+
+  <div class="count" id="count">已导入 0 张</div>
+  <div class="img-grid" id="grid"></div>
+
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <div class="control">
+        <span class="control-label">透明度</span>
+        <input type="range" id="opacityRange" min="1" max="50" step="1" value="2">
+        <span class="control-value" id="opacityVal">2%</span>
+      </div>
+      <div class="control">
+        <span class="control-label">水印大小</span>
+        <input type="range" id="sizeRange" min="5" max="50" step="1" value="20" title="水印宽度按每张图片自身短边的占比计算">
+        <span class="control-value" id="sizeVal">20%</span>
+      </div>
+    </div>
+    <div class="toolbar-group">
+      <span class="control-label">布局</span>
+      <div class="seg" id="layoutSeg">
+        <button class="active" data-layout="tile">平铺</button>
+        <button data-layout="center">居中</button>
+      </div>
+      <span class="control-label">格式</span>
+      <div class="seg">
+        <button class="active" data-fmt="png">PNG</button>
+        <button data-fmt="jpg">JPG</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="btn btn-ghost" id="clearBtn" disabled>清空</button>
+    </div>
+    <div class="toolbar-group">
+      <button class="btn btn-green" id="exportBtn" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        导出全部
+      </button>
+    </div>
+  </div>
+  <div class="status" id="status"></div>
+
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 水印按每张图片自身短边占比 20% 计算，透明度 2%，平铺覆盖 · 导出文件名为"原名_水印.格式"</footer>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-overlay-inner">
+    <svg class="drop-overlay-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="drop-overlay-text">松开鼠标即可放入图片</div>
+    <div class="drop-overlay-sub">可批量拖放多张</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const dz = $('dropZone'), grid = $('grid'), count = $('count');
+const clearBtn = $('clearBtn'), exportBtn = $('exportBtn'), statusEl = $('status');
+const opacityRange = $('opacityRange'), opacityVal = $('opacityVal');
+const sizeRange = $('sizeRange'), sizeVal = $('sizeVal');
+
+/* ===== 水印 SVG（直接内嵌，导入即用） ===== */
+const WATERSVG =
+'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" width="69.9250" height="68.1750" viewBox="0.6625 0.6625 69.9250 68.1750">' +
+'<g inkscape:groupmode="layer" inkscape:label="图层 1">' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M34.7151 61.8755C39.9455 67.4371 46.2342 68.5006 53.248 66.4872 73.0755 53.5578 45.1738 26.8268 34.7151 19.8561 24.2563 26.8268-3.6454 53.5578 16.1821 66.4872 23.1959 68.5006 29.4846 67.4371 34.7151 61.8755ZM34.7151 56.1121C38.2921 59.9159 42.5931 60.6427 47.3893 59.2659 60.9497 50.4238 41.8674 32.142 34.7151 27.3756 27.5627 32.142 8.4804 50.4238 22.0408 59.2659 26.837 60.6427 31.1377 59.9159 34.7151 56.1121" fill="#e60013" fill-rule="evenodd"/>' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M35.3608 18.4442C41.8694 22.5947 47.7366 27.3305 53.6318 32.3561 55.0826 33.5911 56.4024 34.6805 58.2052 35.4061 62.0028 36.9366 65.6802 36.1599 69.2535 33.8803 58.5264 24.342 47.1614 19.7135 35.3608 18.4442" fill="#009944" fill-rule="evenodd"/>' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M33.893 18.4442C27.3844 22.5947 21.5172 27.3305 15.6217 32.3561 14.1712 33.5911 12.8514 34.6805 11.0486 35.4061 7.251 36.9366 3.5736 36.1599 0 33.8803 10.7274 24.342 22.0924 19.7135 33.893 18.4442" fill="#009944" fill-rule="evenodd"/>' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M32.4887 52.5589V34.7272H36.9414V52.5589Z" fill="#e60013" fill-rule="evenodd"/>' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M43.6309 45.8694H25.7992V41.4167H43.6309Z" fill="#e60013" fill-rule="evenodd"/>' +
+'<path transform="matrix(1,0,0,-1,1,68.4306)" d="M10.8014 16.6731C10.9304 16.7791 11.1311 16.8489 11.4018 16.8854 11.8003 16.9217 12.206 16.9036 12.6181 16.8307 13.017 16.7247 13.2806 16.458 13.4093 16.0333 13.4617 15.8907 13.4419 15.73 13.3498 15.554 13.7486 15.4117 14.0255 15.0327 14.1806 14.417 14.22 13.8104 14.0848 13.3313 13.775 12.9767 13.1851 12.549 12.6873 12.2669 12.2882 12.1243 12.2258 11.8392 12.3344 11.6969 12.6181 11.6969 13.0793 11.8757 13.5244 12.1243 13.9499 12.4427 14.1443 12.5853 14.4079 12.6553 14.741 12.6553 15.1166 12.549 15.4103 12.3367 15.6308 12.018 15.7198 11.7332 15.7329 11.4846 15.6705 11.2691 15.6178 11.0571 15.3541 10.9327 14.8762 10.8961 14.2991 11.0387 13.6993 11.0571 13.0793 10.9508 12.397 10.6203 11.9027 10.2229 11.5929 9.7591 11.9027 9.832 12.2553 9.9198 12.6541 10.0259 12.8486 10.0624 13.0365 10.1503 13.2146 10.2929 13.7455 10.6963 14.118 10.5718 14.3354 9.9198 14.4904 9.5287 14.3025 9.0312 13.775 8.4277 13.5575 8.0365 13.4487 7.6456 13.4487 7.2541 13.2936 6.9358 12.9838 6.7388 12.5192 6.6691 12.018 6.5962 11.4576 6.3417 10.8411 5.9049 10.4159 5.4774 10.0304 5.3348 9.6809 5.4774 9.3478 5.7623 9.1006 6.105 8.9459 6.5083 8.5995 7.0418 8.4118 7.594 8.3886 8.1609 8.4515 8.6581 8.748 8.9796 9.2755 9.1193 9.7668 9.2982 10.2413 9.4771 10.7062 9.6528 11.0523 9.7591 11.3621 10.0259 11.6323 10.4536 9.9312 9.9198 8.2766 9.3345 6.6679 8.6947 6.2294 8.4461 5.8768 8.3914 5.6066 8.534 5.4516 8.9252 5.3561 9.2282 5.3161 9.4408 5.379 9.7954 5.6625 10.0259 6.1668 10.1322 7.3369 10.4536 8.4515 10.8326 9.506 11.2691 9.9312 11.5177 9.9907 11.7332 9.6809 11.9092 8.9459 12.0518 8.4713 12.3185 8.2534 12.7097 8.1612 13.2435 8.1743 13.7225 8.2896 14.1503 8.5734 14.3989 8.9031 14.5412 9.2755 14.5746 9.7668 14.6475 10.1523 14.7535 10.4355 14.8961 10.5511 15.5117 10.673 16.1031 10.8014 16.6731ZM10.3368 8.1062C10.3136 7.7516 10.4522 7.4696 10.7623 7.2541 11.4707 7.6456 11.9027 8.1062 12.0577 8.64ZM10.7062 3.5578C11.3224 4.1278 11.85 4.8373 12.2882 5.6925 11.9421 6.0109 12.018 6.1716 12.5192 6.1716 12.74 6.4324 13.0499 6.5265 13.4487 6.4568 13.7818 6.2657 13.9499 5.9746 13.9499 5.5834 13.6794 5.0528 13.2676 4.5371 12.7137 4.0399 13.1783 4.1097 13.5442 3.9852 13.8146 3.6669 13.9037 3.4515 13.9232 3.221 13.8739 2.9724 13.7455 2.7601 13.5113 2.5994 13.1783 2.4934 11.7479 2.09 10.3501 1.6744 8.9853 1.2501 8.4053 1.0712 7.9569 1.1256 7.634 1.4105 7.4789 1.6929 7.403 1.9474 7.403 2.1719 7.4392 2.3871 7.6008 2.5481 7.8843 2.6538 8.2834 2.7601 8.7744 2.9027 9.3546 3.0784ZM8.5238 4.6797C8.4053 4.892 8.4053 5.0862 8.5238 5.2648 8.7415 5.4077 9.0181 5.4437 9.3546 5.3711 9.7271 5.1951 9.9448 5.0162 10.0106 4.8373 10.0369 4.5553 10.0369 4.3067 10.0106 4.0915 10.3173 3.9852 10.3073 3.8095 9.9711 3.5578 9.9711 3.5578 9.8161 3.5062 9.506 3.3999 9.4436 3.3636 9.3149 3.4696 9.1205 3.7185ZM20.1305 15.927C20.5027 16.1393 20.8789 16.1575 21.2513 15.9786 21.5215 15.7666 21.7193 15.5358 21.8511 15.2872 22.0292 14.9899 22.0623 14.7172 21.947 14.4686 21.291 14.1834 20.6714 13.9348 20.0908 13.7225 19.679 13.5437 19.2733 13.3495 18.8748 13.1372 18.413 12.922 18.07 12.7826 17.8526 12.7097 17.4274 12.5308 17.3055 12.6734 17.4835 13.1372 17.8824 13.6681 18.3141 14.2016 18.779 14.7353ZM20.1305 10.7203C20.48 10.9449 20.8658 10.963 21.291 10.7719 21.4194 10.5959 21.4951 10.3989 21.5215 10.1866 21.6105 9.938 21.5215 9.6712 21.2513 9.3861 20.5688 8.9614 19.9196 8.5884 19.3 8.2672 19.0162 8.0546 18.7656 7.806 18.5482 7.5212 17.9946 7.3786 17.5955 7.2028 17.3483 6.9874 17.0022 6.7054 16.9693 7.0055 17.2528 7.8942 17.7174 8.6066 18.2778 9.2282 18.934 9.7591ZM20.0908 6.5083C20.3119 6.7207 20.6019 6.8995 20.9614 7.0418 21.0634 7.0418 21.172 7.024 21.291 6.9874 21.4821 6.8114 21.6371 6.6144 21.7522 6.4023 21.9073 5.8564 21.8741 5.3711 21.657 4.9465 20.3941 3.3817 18.8943 1.8839 17.1573 .4496 16.9101 .3433 16.6034 .307 16.2278 .3433 15.6506 .2007 15.5154 .3251 15.8221 .7163 16.9296 2.2567 18.0899 3.8611 19.3 5.5318ZM36.4609 12.549C36.1774 13.6162 35.8214 14.7413 35.3959 15.927 35.3336 16.2456 35.4356 16.4758 35.706 16.6184 36.0553 16.6915 36.4277 16.6731 36.8266 16.5671 37.1103 16.4242 37.3082 16.1756 37.4267 15.8179 37.463 15.4996 37.463 15.175 37.4267 14.8416 37.4893 14.2381 37.677 13.5984 37.984 12.922 38.5376 13.2069 39.098 13.4739 39.6649 13.7225 40.0637 13.7923 40.4198 13.7923 40.7265 13.7225 40.8583 13.6162 40.9473 13.4739 41.0003 13.2951 41.0003 12.7976 40.8453 12.4611 40.5351 12.2822 39.8659 11.9636 39.1377 11.6787 38.353 11.4301 38.353 10.4596 38.7255 9.1375 39.4739 7.4696 39.7803 8.2854 40.0439 9.2798 40.265 10.4536 40.4461 10.7141 40.6772 10.8629 40.9603 10.8961 41.1384 10.8629 41.3396 10.8023 41.557 10.7203 41.8175 10.5778 41.9593 10.2929 41.9825 9.8683 41.5834 8.2338 41.0757 6.7326 40.4561 5.3711 41.0757 4.5887 41.6628 3.7913 42.2164 2.9724 42.5231 2.5115 42.7569 2.5631 42.912 3.1331 43.001 3.5243 43.09 3.8974 43.1824 4.252 43.4395 4.7132 43.5943 4.625 43.6436 3.9852 43.6836 3.594 43.7031 3.221 43.7031 2.8664 43.7655 2.6178 43.9075 2.3689 44.1283 2.1203 44.1283 1.7169 44.1283 1.2832 44.1283 .8223 43.8055 .7526 43.4889 .5737 43.1824 .2886 42.912 .2554 42.556 .3614 42.1177 .61 41.2571 1.2832 40.3143 2.2507 39.2992 3.5062 38.643 3.5427 37.9607 3.2939 37.2521 2.7601 37.0083 2.6178 36.741 2.4205 36.4609 2.1719 36.0853 2.1719 36.0094 2.3689 36.2268 2.7601 36.7177 3.327 37.4564 4.0399 38.4486 4.892 37.7399 6.681 37.1234 8.5706 36.5958 10.5596 35.7321 10.5233 34.8489 10.2745 33.9489 9.8138 33.7941 9.4952 33.7184 9.21 33.7184 8.9614 33.87 8.7463 34.1799 8.6947 34.6445 8.8007 35.0169 8.907 35.3599 9.104 35.6664 9.3861 35.8872 9.5649 36.1179 9.6347 36.362 9.6012 36.5828 9.4589 36.7245 9.21 36.7872 8.8554 36.9422 8.534 36.7543 8.2157 36.2268 7.8942 36.3421 6.8511 36.4215 5.8167 36.4609 4.786 36.2665 3.7913 35.8611 3.1513 35.2412 2.8664 34.9081 2.9361 34.6181 2.9027 34.3743 2.7601 34.0906 2.4749 33.7283 2.3145 33.2932 2.281 33.0457 2.4934 32.815 2.6538 32.5976 2.7601 32.5709 3.115 32.5247 3.4696 32.4624 3.8245 32.3966 4.1822 32.5052 4.3067 32.7889 4.1975 33.1645 4.0581 33.4843 4.0399 33.7544 4.146 34.2587 4.2157 34.5983 4.519 34.7797 5.0528 34.7797 5.7623 34.7797 6.4627 34.7797 7.1481 34.4699 6.8995 34.1467 6.7054 33.8139 6.5628 33.3094 6.5265 32.9238 6.2354 32.6534 5.6925 32.2809 4.8736 32.0306 3.9671 31.9017 2.9724 31.6579 2.7601 31.411 2.5296 31.1669 2.281 30.8835 2.0203 30.6986 2.1779 30.6062 2.7601 30.8273 4.0731 31.1471 5.3073 31.5723 6.4568 31.7273 8.1609 31.8886 9.8379 32.0567 11.4846 32.0797 11.8029 32.1392 12.1425 32.2285 12.4974 32.4754 12.7097 32.7064 12.8339 32.9238 12.8704 33.0789 12.8704 33.2666 12.8157 33.4843 12.7097 33.6654 12.64 33.8204 12.3551 33.9489 11.8576 34.5424 12.0002 35.1456 12.1425 35.7653 12.2822ZM41.6166 14.417C41.1783 14.2016 40.8682 14.2016 40.6902 14.417 40.4331 14.8416 40.199 15.2569 39.9949 15.6603 39.8923 15.9786 39.8923 16.3001 39.9949 16.6184 40.0836 16.7613 40.2849 16.8489 40.5913 16.8854 40.9011 16.8157 41.1783 16.6915 41.4221 16.5124 41.7977 16.1575 42.0746 15.7666 42.2527 15.3388 42.3581 15.0083 42.332 14.7353 42.177 14.5233ZM27.824 8.7463C27.2078 8.8554 26.8651 9.21 26.8024 9.8138 26.7627 10.2047 26.7956 10.6021 26.898 11.0055 26.9904 11.3604 27.2341 11.609 27.633 11.7513L28.6551 12.0696C28.6812 13.3495 28.7734 14.6171 28.9253 15.8726 29.054 16.1212 29.1954 16.3335 29.3505 16.5124 29.5977 16.655 29.8616 16.655 30.1448 16.5124 30.4251 16.3001 30.613 15.927 30.702 15.3935 30.8205 14.5293 30.801 13.5799 30.6459 12.549 30.9294 12.4427 31.1338 12.1759 31.2622 11.7513 31.3152 11.5027 31.3614 11.2876 31.3974 11.1115 31.3614 10.8145 31.2063 10.508 30.9362 10.1866 30.7417 10.0077 30.524 9.832 30.28 9.6528 30.1878 8.8373 30.1119 8.0184 30.0461 7.2028 30.2406 7.2726 30.4381 7.3451 30.6459 7.4149 30.801 7.4514 30.9722 7.4149 31.1669 7.3089 31.3217 6.9874 31.335 6.7207 31.2063 6.5083 30.4319 5.1831 29.4625 3.9852 28.2889 2.9208 27.9791 2.7782 27.7021 2.8298 27.4584 3.0784 27.1123 3.8611 27.0462 4.5009 27.2639 4.998 27.7948 5.4258 28.1472 5.7441 28.3286 5.9596 28.3022 6.7507 28.2889 7.5759 28.2889 8.4277ZM53.0977 12.922C53.0717 12.9946 52.9824 13.119 52.8276 13.2951 52.2079 14.044 51.789 14.705 51.5716 15.2872 51.6342 15.8179 51.944 16.194 52.4979 16.4064 53.0515 16.3698 53.5657 16.0152 54.0439 15.3388 54.3141 14.7231 54.2188 14.22 53.754 13.8285 53.9714 13.3676 53.9416 12.9583 53.6581 12.6037 54.1593 12.7097 54.6109 12.8339 55.0094 12.9767 55.0987 14.0774 55.2076 15.2025 55.3394 16.3517 55.5174 17.0643 55.9491 17.3463 56.6317 17.2037 57.314 16.9551 57.6697 16.4426 57.693 15.6603 57.6697 15.2206 57.6434 14.7719 57.6173 14.3076 58.4807 15.1021 59.3283 15.8726 60.1654 16.6184 60.696 16.9401 61.2037 16.9733 61.6915 16.7247 62.2191 16.3001 62.2191 15.7966 61.6915 15.2147 60.3006 14.7172 58.9555 14.2016 57.6567 13.6681 57.6303 13.4921 57.5515 13.3132 57.4226 13.1372 59.3181 13.2435 61.2037 13.1556 63.0828 12.8704 63.9859 12.9402 64.5265 12.6916 64.7045 12.1243 65.1427 11.7332 65.2518 11.3238 65.0341 10.8961 64.8791 10.4233 64.3584 10.2413 63.4683 10.3473 62.9938 10.6781 62.4796 10.8023 61.9257 10.7203 60.7124 10.3657 60.4358 10.4233 61.0948 10.8961 61.7377 11.2541 62.354 11.609 62.9476 11.9636 61.7771 12.2122 60.5211 12.2822 59.1831 12.1759 58.3194 12.0334 57.5646 11.8757 56.9217 11.6969 55.7382 11.1631 55.1316 11.0934 55.1052 11.4846 54.6043 11.448 54.1066 11.3936 53.6185 11.3238 53.1539 11.1115 52.5835 11.0055 51.9009 11.0055 51.2419 10.8145 50.6815 10.5959 50.22 10.3473 50.1046 9.9561 50.0913 9.5105 50.1806 9.013 50.3354 8.731 50.2693 8.4824 49.9859 8.2672 49.7815 7.7 49.4158 7.4149 48.8852 7.4149 48.5785 7.7332 48.4498 8.1428 48.4994 8.64 48.5388 9.6712 48.7466 10.7779 49.119 11.9636 49.208 12.3911 49.5312 12.549 50.0851 12.4427 50.3683 12.3367 50.5531 12.1941 50.6452 12.018 51.4168 12.2306 52.2541 12.4064 53.1539 12.549ZM58.1579 11.1115C59.0973 11.2876 59.6574 11.0327 59.8388 10.3473 60.0168 10.1322 59.8654 9.6712 59.3742 8.9614 59.2191 8.6066 59.1763 8.358 59.239 8.2157 59.0477 7.609 58.6721 7.2726 58.1182 7.2028 57.8347 7.13 57.6371 6.9693 57.5215 6.7207 57.3931 6.4627 57.2678 6.1897 57.1524 5.9049 57.4622 6.0109 57.7721 6.099 58.0819 6.1716 59.0346 6.2413 59.5094 5.9596 59.5094 5.3195 59.5488 4.786 59.1931 4.3401 58.4478 3.9852 58.0096 3.8792 57.5909 3.7548 57.1921 3.6122 57.1921 3.2576 57.2051 2.8664 57.2315 2.4386 58.7874 2.5115 60.3729 2.5115 61.9815 2.4386 62.5354 2.3689 62.7795 1.8658 62.7168 .9286 62.6247 .3614 62.1496 .0947 61.2862 .131 61.0024 .2007 60.63 .2554 60.1654 .2886 58.1839 .3977 56.2788 .3433 54.4493 .131 53.1867-.1176 52.2737-.0116 51.7068 .4496 51.552 .6616 51.4298 .9649 51.3408 1.3561 51.5585 1.7926 52.0991 2.0837 52.9625 2.2263 53.7735 2.3326 54.5777 2.3871 55.3757 2.3871 55.3757 2.848 55.3757 3.221 55.3757 3.5062 54.2682 3.4696 53.5428 3.7001 53.1935 4.1975 53.1043 4.8039 53.3682 5.1588 53.9847 5.2648 54.4232 5.2285 54.9306 5.3014 55.5106 5.4774 55.5106 5.5834 55.5106 5.6563 55.5106 5.6925 55.0854 5.55 55.0295 5.6744 55.3394 6.0653 55.2997 6.2082 55.2668 6.3536 55.2404 6.5083 54.8019 5.7866 54.4031 5.7501 54.0439 6.4023 53.477 7.0055 53.1374 7.8761 53.0186 9.013 53.0453 9.5105 53.246 9.9561 53.6185 10.3473 53.9549 10.7141 54.2747 10.7141 54.5845 10.3473 55.2008 10.6781 55.9491 10.9145 56.8261 11.0571ZM57.3273 9.4952C56.7105 9.3163 56.1042 9.1193 55.5106 8.907 55.3558 8.7644 55.313 8.5521 55.3757 8.2672 55.5043 8.1247 55.603 7.9668 55.6656 7.7879 55.9097 7.8942 56.1733 8.0002 56.4568 8.1062 56.7666 8.2488 57.024 8.5521 57.2315 9.013Z" fill="#e60013"/>' +
+'</g>' +
+'</svg>';
+
+let wmImg = new Image();
+const wmUrl = URL.createObjectURL(new Blob([WATERSVG], { type: 'image/svg+xml' }));
+wmImg.onload = () => { if (items.length) render(); };
+wmImg.src = wmUrl;
+
+/* ===== 状态 ===== */
+let items = [];       // { file, url, im }
+let fmt = 'png';
+let layout = 'tile';  // tile=平铺 / center=居中
+let opacity = 2;      // %
+let sizePct = 20;     // 水印宽占图片短边的 %（按各图自身尺寸单独计算）
+
+/* ===== 导入 ===== */
+function addFiles(fileList) {
+  let added = 0;
+  Array.from(fileList).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(f);
+    const im = new Image();
+    im.onload = () => {
+      items.push({ file: f, url: url, im: im });
+      added++;
+      render();
+    };
+    im.onerror = () => URL.revokeObjectURL(url);
+    im.src = url;
+  });
+}
+
+/* ===== 水印绘制 ===== */
+function drawWatermark(ctx, imgW, imgH, ox, oy) {
+  if (!wmImg.complete || !wmImg.naturalWidth) return;
+  const wmW = Math.min(imgW, imgH) * sizePct / 100;
+  const wmH = wmW * wmImg.naturalHeight / wmImg.naturalWidth;
+  ctx.save();
+  ctx.globalAlpha = opacity / 100;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  if (layout === 'tile') {
+    const step = wmW * 1.6;
+    for (let y = 0; y < imgH; y += step)
+      for (let x = 0; x < imgW; x += step)
+        ctx.drawImage(wmImg, ox + x, oy + y, wmW, wmH);
+  } else {
+    ctx.drawImage(wmImg, ox + (imgW - wmW) / 2, oy + (imgH - wmH) / 2, wmW, wmH);
+  }
+  ctx.restore();
+}
+
+/* ===== 渲染（卡片显示原图 + 水印预览） ===== */
+function render() {
+  count.textContent = '已导入 ' + items.length + ' 张';
+  exportBtn.disabled = items.length === 0;
+  clearBtn.disabled = items.length === 0;
+  grid.innerHTML = '';
+  items.forEach((it, i) => {
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    const cv = document.createElement('canvas');
+    cv.className = 'img-thumb';
+    cv.width = 260; cv.height = 260;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, 260, 260);
+    const scale = Math.min(260 / it.im.naturalWidth, 260 / it.im.naturalHeight);
+    const dw = it.im.naturalWidth * scale, dh = it.im.naturalHeight * scale;
+    const dx = (260 - dw) / 2, dy = (260 - dh) / 2;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(it.im, dx, dy, dw, dh);
+    drawWatermark(ctx, dw, dh, dx, dy);
+    const rm = document.createElement('button');
+    rm.className = 'img-rm';
+    rm.title = '移除';
+    rm.textContent = '×';
+    rm.addEventListener('click', () => {
+      URL.revokeObjectURL(it.url);
+      items.splice(i, 1);
+      render();
+    });
+    const name = document.createElement('div');
+    name.className = 'img-name';
+    name.textContent = it.file.name;
+    const dims = document.createElement('div');
+    dims.className = 'img-dims';
+    dims.textContent = it.im.naturalWidth + '×' + it.im.naturalHeight;
+    card.appendChild(cv);
+    card.appendChild(rm);
+    card.appendChild(name);
+    card.appendChild(dims);
+    grid.appendChild(card);
+  });
+}
+
+// 滑块变化 → 实时刷新预览（节流）
+function scheduleRender() {
+  clearTimeout(scheduleRender._t);
+  scheduleRender._t = setTimeout(render, 60);
+}
+opacityRange.addEventListener('input', () => {
+  opacity = +opacityRange.value;
+  opacityVal.textContent = opacity + '%';
+  scheduleRender();
+});
+sizeRange.addEventListener('input', () => {
+  sizePct = +sizeRange.value;
+  sizeVal.textContent = sizePct + '%';
+  scheduleRender();
+});
+
+/* ===== 布局 / 格式切换 ===== */
+const LAYOUT_BTN = {
+  tile: document.querySelector('#layoutSeg button[data-layout=tile]'),
+  center: document.querySelector('#layoutSeg button[data-layout=center]')
+};
+Object.values(LAYOUT_BTN).forEach(b => b.addEventListener('click', () => {
+  layout = b.dataset.layout;
+  Object.values(LAYOUT_BTN).forEach(x => x.classList.toggle('active', x === b));
+  render();
+}));
+const FMT_BTN = {
+  png: document.querySelector('.seg button[data-fmt=png]'),
+  jpg: document.querySelector('.seg button[data-fmt=jpg]')
+};
+Object.values(FMT_BTN).forEach(b => b.addEventListener('click', () => {
+  fmt = b.dataset.fmt;
+  Object.values(FMT_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 点击选择（支持多选） ===== */
+dz.addEventListener('click', () => {
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.multiple = true;
+  i.onchange = () => { if (i.files.length) addFiles(i.files); };
+  i.click();
+});
+// 上传区拖拽
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+/* ===== 全屏拖拽 ===== */
+const dropOverlay = $('dropOverlay');
+let dragDepth = 0, showTimer = null;
+
+function hideDropOverlay() {
+  if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+  dropOverlay.classList.remove('show');
+}
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+  dragDepth++;
+  if (!showTimer) showTimer = setTimeout(() => { dropOverlay.classList.add('show'); showTimer = null; }, 40);
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('dragleave', e => {
+  if (dragDepth > 0) dragDepth--;
+  if (dragDepth === 0) hideDropOverlay();
+});
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  dragDepth = 0;
+  hideDropOverlay();
+  if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+/* ===== 清空 ===== */
+clearBtn.addEventListener('click', () => {
+  items.forEach(it => URL.revokeObjectURL(it.url));
+  items = [];
+  render();
+  statusEl.textContent = '';
+  statusEl.className = 'status';
+});
+
+/* ===== 批量导出 ===== */
+exportBtn.addEventListener('click', async () => {
+  if (!items.length) return;
+  if (!wmImg.complete || !wmImg.naturalWidth) {
+    statusEl.textContent = '水印尚未加载完成，请稍候再试';
+    return;
+  }
+  const isPng = fmt === 'png';
+  const mime = isPng ? 'image/png' : 'image/jpeg';
+  const ext = isPng ? 'png' : 'jpg';
+  const layoutName = layout === 'tile' ? '平铺' : '居中';
+  exportBtn.disabled = true;
+  clearBtn.disabled = true;
+  statusEl.className = 'status';
+  let done = 0;
+  for (const it of items) {
+    statusEl.textContent = '正在导出 ' + (done + 1) + '/' + items.length + ' ...';
+    const c = document.createElement('canvas');
+    c.width = it.im.naturalWidth;
+    c.height = it.im.naturalHeight;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (!isPng) { // JPG 无透明通道，先填白底避免变黑
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
+    ctx.drawImage(it.im, 0, 0, c.width, c.height);
+    drawWatermark(ctx, c.width, c.height, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, mime, isPng ? undefined : 0.92));
+    const name = it.file.name.replace(/\.[^.]+$/, '') + '_水印.' + ext;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    done++;
+  }
+  exportBtn.disabled = false;
+  clearBtn.disabled = false;
+  statusEl.className = 'status done';
+  statusEl.textContent = '已导出 ' + done + ' 张加水印图片（' + layoutName + ' · 透明度 ' + opacity + '% · ' + (isPng ? 'PNG' : 'JPG') + '）';
+});
+</script>
+</body>
+</html>
