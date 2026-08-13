@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批量白底工具</title>
+<style>
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --green: #059669;
+  --green-hover: #047857;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --bg: #f3f4f6;
+  --card-bg: #fff;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  width: 100%;
+  max-width: 900px;
+  position: relative;
+  overflow: hidden;
+}
+
+h1 { font-size: 16px; font-weight: 700; }
+h1 small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ===== 上传区 ===== */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--bg);
+  padding: 36px 16px;
+  margin-top: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary-light), transparent 60%);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); }
+.upload-zone.dragover { background: var(--primary-light); }
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  margin-bottom: 8px;
+  position: relative;
+}
+.upload-text { color: var(--text-secondary); font-size: 13px; line-height: 1.6; position: relative; }
+.upload-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; position: relative; }
+
+/* ===== 图片网格 ===== */
+.count { margin-top: 16px; font-size: 12px; color: var(--text-secondary); }
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.img-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  position: relative;
+  background: #fff;
+}
+.img-thumb {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: block;
+}
+.img-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.img-dims { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.img-rm {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17,24,39,.55);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.img-rm:hover { background: #dc2626; }
+
+/* ===== 工具栏 ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.toolbar-group { display: flex; align-items: center; gap: 10px; }
+.control-label { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.seg { display: flex; align-items: center; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
+.seg button {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.seg button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-hover); box-shadow: 0 2px 8px rgba(5,150,101,.3); }
+.btn-green:disabled { background: #c4c9d4; box-shadow: none; cursor: not-allowed; }
+.btn-ghost { background: #fff; color: var(--text-secondary); border: 2px solid var(--border); padding: 9px 18px; }
+.btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-ghost:disabled { color: #c4c9d4; border-color: #d8dce4; cursor: not-allowed; }
+
+.status { margin-top: 12px; font-size: 12px; color: var(--text-secondary); min-height: 18px; }
+.status.done { color: var(--green); }
+
+footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--text-muted); }
+
+/* ===== 全屏拖拽遮罩 ===== */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.03);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s ease, visibility .3s ease, background .3s ease,
+              backdrop-filter .3s ease, -webkit-backdrop-filter .3s ease;
+}
+.drop-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  background: rgba(0,0,0,.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 36px 48px;
+  box-shadow: var(--shadow);
+  border: 2px dashed var(--primary);
+}
+.drop-overlay-icon { width: 44px; height: 44px; fill: none; stroke: var(--primary); stroke-width: 1.5; }
+.drop-overlay-text { font-size: 18px; font-weight: 700; color: var(--primary); }
+.drop-overlay-sub { font-size: 13px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>批量白底工具<small>把透明底图片批量合成白底，导出 PNG / JPG</small></h1>
+
+  <div class="upload-zone" id="dropZone">
+    <svg class="upload-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="upload-text">点击或拖拽图片到此处（可多选）</div>
+    <div class="upload-sub">支持 PNG / JPG / WebP，页面任意位置拖入也可</div>
+  </div>
+
+  <div class="count" id="count">已导入 0 张</div>
+  <div class="img-grid" id="grid"></div>
+
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <span class="control-label">模式</span>
+      <div class="seg" id="modeSeg">
+        <button class="active" data-mode="orig">原尺寸</button>
+        <button data-mode="fit">居中缩放</button>
+      </div>
+      <span class="control-label">格式</span>
+      <div class="seg">
+        <button class="active" data-fmt="png">PNG</button>
+        <button data-fmt="jpg">JPG</button>
+      </div>
+    </div>
+    <div class="toolbar-group">
+      <button class="btn btn-ghost" id="clearBtn" disabled>清空</button>
+      <button class="btn btn-green" id="exportBtn" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        导出全部
+      </button>
+    </div>
+  </div>
+  <div class="status" id="status"></div>
+
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出文件名为"原名_白底.格式"</footer>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-overlay-inner">
+    <svg class="drop-overlay-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="drop-overlay-text">松开鼠标即可放入图片</div>
+    <div class="drop-overlay-sub">可批量拖放多张</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const dz = $('dropZone'), grid = $('grid'), count = $('count');
+const clearBtn = $('clearBtn'), exportBtn = $('exportBtn'), statusEl = $('status');
+const FMT_BTN = {
+  png: document.querySelector('.seg button[data-fmt=png]'),
+  jpg: document.querySelector('.seg button[data-fmt=jpg]')
+};
+
+let items = [];   // { file, url, im }
+let fmt = 'png';
+let mode = 'orig';   // orig=原尺寸白底 / fit=2475方图商品居中缩放
+
+/* ===== 导入 ===== */
+function addFiles(fileList) {
+  let added = 0;
+  Array.from(fileList).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(f);
+    const im = new Image();
+    im.onload = () => {
+      items.push({ file: f, url: url, im: im });
+      added++;
+      render();
+    };
+    im.onerror = () => URL.revokeObjectURL(url);
+    im.src = url;
+  });
+}
+
+function render() {
+  count.textContent = '已导入 ' + items.length + ' 张';
+  exportBtn.disabled = items.length === 0;
+  clearBtn.disabled = items.length === 0;
+  grid.innerHTML = '';
+  items.forEach((it, i) => {
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    card.innerHTML =
+      '<img class="img-thumb" src="' + it.url + '" alt="">' +
+      '<button class="img-rm" title="移除">×</button>' +
+      '<div class="img-name">' + it.file.name + '</div>' +
+      '<div class="img-dims">' + it.im.naturalWidth + '×' + it.im.naturalHeight + '</div>';
+    card.querySelector('.img-rm').addEventListener('click', () => {
+      URL.revokeObjectURL(it.url);
+      items.splice(i, 1);
+      render();
+    });
+    grid.appendChild(card);
+  });
+}
+
+// 点击选择（支持多选）
+dz.addEventListener('click', () => {
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.multiple = true;
+  i.onchange = () => { if (i.files.length) addFiles(i.files); };
+  i.click();
+});
+// 上传区拖拽
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+/* ===== 全屏拖拽 ===== */
+const dropOverlay = $('dropOverlay');
+let dragDepth = 0, showTimer = null;
+
+function hideDropOverlay() {
+  if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+  dropOverlay.classList.remove('show');
+}
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+  dragDepth++;
+  if (!showTimer) showTimer = setTimeout(() => { dropOverlay.classList.add('show'); showTimer = null; }, 40);
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('dragleave', e => {
+  if (dragDepth > 0) dragDepth--;
+  if (dragDepth === 0) hideDropOverlay();
+});
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  dragDepth = 0;
+  hideDropOverlay();
+  if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+/* ===== 格式切换 ===== */
+Object.values(FMT_BTN).forEach(b => b.addEventListener('click', () => {
+  fmt = b.dataset.fmt;
+  Object.values(FMT_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 模式切换：原尺寸 / 居中缩放 ===== */
+const MODE_BTN = {
+  orig: document.querySelector('#modeSeg button[data-mode=orig]'),
+  fit: document.querySelector('#modeSeg button[data-mode=fit]')
+};
+Object.values(MODE_BTN).forEach(b => b.addEventListener('click', () => {
+  mode = b.dataset.mode;
+  Object.values(MODE_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 清空 ===== */
+clearBtn.addEventListener('click', () => {
+  items.forEach(it => URL.revokeObjectURL(it.url));
+  items = [];
+  render();
+  statusEl.textContent = '';
+  statusEl.className = 'status';
+});
+
+/* ===== 批量导出（白底） ===== */
+exportBtn.addEventListener('click', async () => {
+  if (!items.length) return;
+  const isPng = fmt === 'png';
+  const mime = isPng ? 'image/png' : 'image/jpeg';
+  const ext = isPng ? 'png' : 'jpg';
+  const modeName = mode === 'fit' ? '居中缩放' : '原尺寸';
+  exportBtn.disabled = true;
+  clearBtn.disabled = true;
+  statusEl.className = 'status';
+  let done = 0;
+  for (const it of items) {
+    statusEl.textContent = '正在导出 ' + (done + 1) + '/' + items.length + ' ...';
+    // 画布与商品放置
+    let cw, ch, dx, dy, dw, dh;
+    if (mode === 'fit') {
+      // 2475×2475 方图：商品适配窗口92%后缩放90%，居中
+      cw = ch = 2475;
+      const nw = it.im.naturalWidth, nh = it.im.naturalHeight;
+      const defaultScale = Math.min(2339 * 0.92 / nw, 2339 * 0.92 / nh);
+      const scale = defaultScale * 0.9;
+      dw = nw * scale; dh = nh * scale;
+      dx = 1237.5 - dw / 2; dy = 1237.5 - dh / 2;
+    } else {
+      // 原尺寸白底，不缩放
+      cw = it.im.naturalWidth; ch = it.im.naturalHeight;
+      dw = cw; dh = ch; dx = 0; dy = 0;
+    }
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = ch;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(it.im, dx, dy, dw, dh);
+    const blob = await new Promise(r => c.toBlob(r, mime, isPng ? undefined : 0.92));
+    const name = it.file.name.replace(/\.[^.]+$/, '') + '_白底.' + ext;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    done++;
+  }
+  exportBtn.disabled = false;
+  clearBtn.disabled = false;
+  statusEl.className = 'status done';
+  statusEl.textContent = '已导出 ' + done + ' 张白底图片（' + modeName + ' · ' + (isPng ? 'PNG' : 'JPG') + '）';
+});
+</script>
+</body>
+</html>

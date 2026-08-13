@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ROI 放大图生成器</title>
+<style>
+:root {
+  /* 背景色 */
+  --bg: #0f0f11;
+  --panel: #1a1a1e;
+  --card: #252529;
+  
+  /* 边框色 */
+  --border: #333338;
+  
+  /* 文字色 */
+  --text: #e8e8ec;
+  --text-muted: #888892;
+  
+  /* 功能色 */
+  --accent: #0A84FF;
+  --accent-hover: #0066CC;
+  --danger: #FF453A;
+  
+  /* Canvas 用色 */
+  --canvas-dark-gray: #5a5a64;
+  --canvas-light-gray: #f5f5f7;
+  
+  /* 圆角 */
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  font-family:"Times New Roman",Times,serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* Header */
+header{
+  height:56px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:0 16px;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+
+header h1{
+  font-size:15px;
+  font-weight:600;
+  margin:0;
+  margin-right:auto;
+  color:var(--text);
+}
+
+.btn{
+  border:none;
+  background:var(--card);
+  color:var(--text);
+  padding:8px 14px;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  font-size:13px;
+  font-weight:500;
+  transition:all 0.15s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.btn:hover{background:#2f2f35}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-danger:hover{background:rgba(255,69,58,0.1)}
+
+input[type=file]{display:none}
+
+.info{
+  color:var(--text-muted);
+  font-size:12px;
+  margin-left:12px;
+}
+
+/* Main Layout */
+main{
+  flex:1;
+  display:flex;
+  overflow:hidden;
+}
+
+/* Canvas Area */
+.canvas-area{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  overflow:auto;
+}
+
+canvas{
+  background:#fff;
+  border-radius:var(--radius-sm);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ROI List Panel */
+.roi-panel{
+  width:280px;
+  background:var(--panel);
+  border-left:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+}
+
+.panel-header{
+  padding:16px;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+  font-weight:800;
+  color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+
+.roi-list{
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+}
+
+.roi-item{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px;
+  margin-bottom:10px;
+  transition:all 0.15s;
+}
+
+.roi-item:hover{
+  border-color:var(--accent);
+}
+
+.roi-item-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+
+.roi-number{
+  font-size:13px;
+  font-weight:600;
+  color:var(--accent);
+}
+
+.roi-delete{
+  width:22px;
+  height:22px;
+  border:none;
+  background:transparent;
+  color:var(--text-muted);
+  cursor:pointer;
+  border-radius:4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  line-height:1;
+}
+
+.roi-delete:hover{
+  background:rgba(255,69,58,0.15);
+  color:var(--danger);
+}
+
+.roi-item label{
+  display:block;
+  font-size:11px;
+  color:var(--text-muted);
+  margin-bottom:6px;
+}
+
+.roi-item input[type=text]{
+  width:100%;
+  background:var(--bg);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:8px 10px;
+  border-radius:var(--radius-sm);
+  font-size:13px;
+  transition:border-color 0.15s;
+}
+
+.roi-item input[type=text]:focus{
+  outline:none;
+  border-color:var(--accent);
+}
+
+.empty-state{
+  text-align:center;
+  padding:40px 20px;
+  color:var(--text-muted);
+  font-size:13px;
+}
+
+/* Bottom panel for landscape images */
+.bottom-panel{
+  display:none;
+  height:200px;
+  background:var(--panel);
+  border-top:1px solid var(--border);
+  flex-direction:column;
+}
+
+.bottom-panel .panel-header{
+  border-bottom:1px solid var(--border);
+  border-top:none;
+}
+
+.bottom-roi-list{
+  flex:1;
+  display:flex;
+  gap:12px;
+  padding:12px;
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+.bottom-roi-item{
+  flex-shrink:0;
+  width:200px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px;
+}
+
+.bottom-roi-item input[type=text]{
+  width:100%;
+  background:var(--bg);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:8px 10px;
+  border-radius:var(--radius-sm);
+  font-size:13px;
+  margin-top:8px;
+}
+
+/* Layout modes */
+body.layout-landscape .roi-panel{
+  display:none;
+}
+
+body.layout-landscape .bottom-panel{
+  display:flex;
+}
+
+body.layout-landscape main{
+  flex-direction:column;
+}
+
+/* Placeholder */
+.placeholder{
+  color:var(--text-muted);
+  font-size:15px;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ROI 放大图生成器</h1>
+  
+  <label for="upload" class="btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    导入图片
+  </label>
+  <input id="upload" type="file" accept="image/*">
+  
+  <button id="clear" class="btn btn-danger">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    清空
+  </button>
+  
+  <button id="export" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    导出 PNG
+  </button>
+  
+  <span class="info" id="info">导入图片后，在图上拖拽框选 ROI</span>
+</header>
+
+<main>
+  <div class="canvas-area">
+    <canvas id="canvas"></canvas>
+  </div>
+  
+  <!-- Right panel for portrait images -->
+  <div class="roi-panel" id="rightPanel">
+    <div class="panel-header">ROI 列表</div>
+    <div class="roi-list" id="roiList">
+      <div class="empty-state">暂无 ROI<br>在左侧图片上拖拽框选</div>
+    </div>
+  </div>
+</main>
+
+<!-- Bottom panel for landscape images -->
+<div class="bottom-panel" id="bottomPanel">
+  <div class="panel-header">ROI 列表</div>
+  <div class="bottom-roi-list" id="bottomRoiList">
+    <div class="empty-state">暂无 ROI，在上方图片上拖拽框选</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let img = null;
+let imgName = "roi-result";
+
+let rois = [];
+let drawing = null;
+
+let scale = 1;
+let imgW = 0;
+let imgH = 0;
+let isLandscape = false;
+
+const GAP = 40;
+const OUTER_PAD = 24;
+const TITLE_H = 22;
+const TITLE_GAP = 6;
+const TITLE_FS = 14;
+const SLOT_GAP = 16;
+
+const DASH = [6,4];
+
+// 从 CSS 变量获取颜色
+function getCssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// ROI 标题存储
+let roiTitles = {};
+
+function fitImage(w,h){
+  // Determine layout based on image aspect ratio first
+  isLandscape = w > h;
+  document.body.classList.toggle('layout-landscape', isLandscape);
+  
+  // Calculate scale based on available space
+  const maxH = isLandscape ? 450 : 650;
+  const maxW = isLandscape ? 850 : 550;
+  scale = Math.min(maxW / w, maxH / h, 1);
+  imgW = Math.round(w * scale);
+  imgH = Math.round(h * scale);
+  
+  updateCanvasSize();
+}
+
+function updateCanvasSize(){
+  if (isLandscape) {
+    // Landscape: thumbnails at bottom
+    const thumbAreaH = 160;
+    canvas.width = imgW + OUTER_PAD * 2;
+    canvas.height = imgH + OUTER_PAD * 2 + GAP + thumbAreaH;
+  } else {
+    // Portrait: thumbnails at right
+    const thumbAreaW = 220;
+    canvas.width = imgW + OUTER_PAD * 2 + GAP + thumbAreaW;
+    canvas.height = imgH + OUTER_PAD * 2;
+  }
+}
+
+function imageToCanvasX(x){ return OUTER_PAD + x * scale; }
+function imageToCanvasY(y){ return OUTER_PAD + y * scale; }
+function imageToCanvasS(s){ return s * scale; }
+
+function canvasToImage(p){
+  return {
+    x: (p.x - OUTER_PAD) / scale,
+    y: (p.y - OUTER_PAD) / scale
+  };
+}
+
+function pointer(e){
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * canvas.width / r.width,
+    y: (e.clientY - r.top) * canvas.height / r.height
+  };
+}
+
+function insideImage(p){
+  return (
+    p.x >= OUTER_PAD &&
+    p.x <= OUTER_PAD + imgW &&
+    p.y >= OUTER_PAD &&
+    p.y <= OUTER_PAD + imgH
+  );
+}
+
+function clampROI(r){
+  r.x = Math.max(0, Math.min(r.x, img.naturalWidth));
+  r.y = Math.max(0, Math.min(r.y, img.naturalHeight));
+
+  const maxSize = Math.min(
+    img.naturalWidth - r.x,
+    img.naturalHeight - r.y
+  );
+
+  r.size = Math.max(4, Math.min(r.size, maxSize));
+  return r;
+}
+
+function makeSquareROI(start, current){
+  const a = canvasToImage(start);
+  const b = canvasToImage(current);
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const size = Math.max(Math.abs(dx), Math.abs(dy));
+
+  const x = dx < 0 ? a.x - size : a.x;
+  const y = dy < 0 ? a.y - size : a.y;
+
+  return clampROI({ x, y, size });
+}
+
+function sortRoisByPosition(list){
+  return list
+    .map((roi, idx) => ({ roi, idx }))
+    .sort((a,b) => {
+      const ay = a.roi.y + a.roi.size / 2;
+      const by = b.roi.y + b.roi.size / 2;
+      if (Math.abs(ay - by) > 8) return ay - by;
+      const ax = a.roi.x + a.roi.size / 2;
+      const bx = b.roi.x + b.roi.size / 2;
+      return ax - bx;
+    })
+    .map((it, order) => ({
+      order,
+      roi: it.roi,
+      srcIndex: it.idx
+    }));
+}
+
+function getZoomLayout(n){
+  if (isLandscape) {
+    // Landscape: thumbnails arranged horizontally at bottom
+    const thumbY = OUTER_PAD + imgH + GAP;
+    const thumbAreaH = canvas.height - thumbY - OUTER_PAD;
+    const availableW = canvas.width - OUTER_PAD * 2;
+    
+    // Calculate box size to fit all thumbnails
+    const maxBoxW = Math.floor((availableW - SLOT_GAP * (n - 1)) / Math.max(n, 1));
+    const maxBoxH = thumbAreaH - TITLE_H - TITLE_GAP;
+    const box = Math.max(60, Math.min(140, maxBoxW, maxBoxH));
+    
+    // Center the thumbnails
+    const totalW = n * box + SLOT_GAP * (n - 1);
+    const startX = OUTER_PAD + Math.floor((availableW - totalW) / 2);
+    
+    return Array.from({length:n}, (_, i) => ({
+      x: startX + i * (box + SLOT_GAP),
+      y: thumbY,
+      size: box
+    }));
+  } else {
+    // Portrait: thumbnails arranged vertically at right
+    const thumbX = OUTER_PAD + imgW + GAP;
+    const thumbAreaW = canvas.width - thumbX - OUTER_PAD;
+    const availableH = imgH;
+    
+    // Calculate box size to fit all thumbnails
+    const maxBoxH = Math.floor((availableH - SLOT_GAP * (n - 1) - TITLE_H * n - TITLE_GAP * n) / Math.max(n, 1));
+    const box = Math.max(60, Math.min(160, maxBoxH, thumbAreaW));
+    
+    // Center the thumbnails vertically
+    const slotHeight = box + TITLE_H + TITLE_GAP;
+    const totalH = n * slotHeight + SLOT_GAP * (n - 1) - SLOT_GAP;
+    const startY = OUTER_PAD + Math.floor((availableH - totalH) / 2);
+    
+    return Array.from({length:n}, (_, i) => ({
+      x: thumbX + Math.floor((thumbAreaW - box) / 2),
+      y: startY + i * (slotHeight + SLOT_GAP),
+      size: box
+    }));
+  }
+}
+
+function dashedRect(x,y,w,h){
+  ctx.save();
+  ctx.setLineDash(DASH);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = getCssVar('--canvas-light-gray');
+  ctx.strokeRect(x,y,w,h);
+  ctx.restore();
+}
+
+function strokeDashedLine(x1,y1,x2,y2,color,width){
+  ctx.save();
+  ctx.setLineDash(DASH);
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAdaptiveDashedLine(x1,y1,x2,y2){
+  // 指引线：大图外深灰色，大图内浅灰色
+  const imgLeft = OUTER_PAD;
+  const imgRight = OUTER_PAD + imgW;
+  const imgTop = OUTER_PAD;
+  const imgBottom = OUTER_PAD + imgH;
+  
+  // 计算线段与大图边界的交点
+  // 使用 Liang-Barsky 算法裁剪线段
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  
+  let t0 = 0, t1 = 1;
+  const p = [-dx, dx, -dy, dy];
+  const q = [x1 - imgLeft, imgRight - x1, y1 - imgTop, imgBottom - y1];
+  
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return; // 线段在外部
+    } else {
+      const t = q[i] / p[i];
+      if (p[i] < 0) {
+        t0 = Math.max(t0, t);
+      } else {
+        t1 = Math.min(t1, t);
+      }
+    }
+  }
+  
+  if (t0 > t1) return; // 无交集
+  
+  const cx1 = x1 + t0 * dx;
+  const cy1 = y1 + t0 * dy;
+  const cx2 = x1 + t1 * dx;
+  const cy2 = y1 + t1 * dy;
+  
+  // 绘制大图外部分（深灰色）
+  if (t0 > 0) {
+    strokeDashedLine(x1, y1, cx1, cy1, getCssVar('--canvas-dark-gray'), 1.5);
+  }
+  
+  // 绘制大图内部分（浅灰色）
+  strokeDashedLine(cx1, cy1, cx2, cy2, getCssVar('--canvas-light-gray'), 1.5);
+  
+  // 绘制剩余部分（深灰色）
+  if (t1 < 1) {
+    strokeDashedLine(cx2, cy2, x2, y2, getCssVar('--canvas-dark-gray'), 1.5);
+  }
+}
+
+function roiTitle(orderIndex, roiId){
+  const prefix = "ROI " + (orderIndex + 1);
+  const suffix = roiTitles[roiId] || "";
+  return suffix ? (prefix + "  " + suffix) : prefix;
+}
+
+function drawCornerIndex(num, x, y){
+  ctx.save();
+  ctx.font = "bold 18px Times New Roman,serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0,0,0,.6)";
+  ctx.fillStyle = "#fff";
+  const text = String(num);
+  ctx.strokeText(text, x + 4, y + 2);
+  ctx.fillText(text, x + 4, y + 2);
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if(!img){
+    ctx.fillStyle = "#666";
+    ctx.font = "16px Times New Roman,serif";
+    ctx.textAlign = "center";
+    ctx.fillText("请先导入图片", canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  ctx.drawImage(img, OUTER_PAD, OUTER_PAD, imgW, imgH);
+
+  // 绘制原大图深灰色边框
+  ctx.save();
+  ctx.strokeStyle = getCssVar('--canvas-dark-gray');
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(OUTER_PAD, OUTER_PAD, imgW, imgH);
+  ctx.restore();
+
+  const all = drawing ? [...rois, drawing] : rois;
+  const sorted = sortRoisByPosition(all);
+  const layouts = getZoomLayout(sorted.length);
+
+  sorted.forEach((item, orderIdx) => {
+    const roi = item.roi;
+    const z = layouts[orderIdx];
+    const roiId = item.srcIndex;
+
+    const rx = imageToCanvasX(roi.x);
+    const ry = imageToCanvasY(roi.y);
+    const rs = imageToCanvasS(roi.size);
+
+    dashedRect(rx, ry, rs, rs);
+    drawCornerIndex(orderIdx + 1, rx, ry);
+
+    const thumbY = z.y + TITLE_H + TITLE_GAP;
+
+    // 根据布局决定指引线连接位置
+    if (isLandscape) {
+      // 横图：指引线从 ROI 底部连到小图顶部
+      drawAdaptiveDashedLine(rx + rs/2, ry + rs, z.x + z.size/2, z.y);
+    } else {
+      // 竖图：指引线从 ROI 右侧连到小图左侧
+      drawAdaptiveDashedLine(rx + rs, ry, z.x, thumbY);
+      drawAdaptiveDashedLine(rx + rs, ry + rs, z.x, thumbY + z.size);
+    }
+
+    ctx.drawImage(
+      img,
+      roi.x, roi.y, roi.size, roi.size,
+      z.x, thumbY, z.size, z.size
+    );
+
+    ctx.save();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = getCssVar('--canvas-dark-gray');
+    ctx.strokeRect(z.x, thumbY, z.size, z.size);
+
+    const title = roiTitle(orderIdx, roiId);
+    ctx.fillStyle = "rgba(255,255,255,.96)";
+    ctx.fillRect(z.x, z.y, z.size, TITLE_H);
+
+    ctx.font = "bold " + TITLE_FS + "px Times New Roman,serif";
+    ctx.fillStyle = "#222";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(title, z.x + z.size / 2, z.y + TITLE_H / 2 + 0.5);
+    ctx.restore();
+  });
+
+  document.getElementById("info").textContent =
+    "ROI 数量：" + rois.length + "（按空间位置自动排序）";
+}
+
+// ROI List UI
+function updateRoiList(){
+  const rightList = document.getElementById("roiList");
+  const bottomList = document.getElementById("bottomRoiList");
+  
+  const sorted = sortRoisByPosition(rois);
+  
+  if (rois.length === 0) {
+    rightList.innerHTML = '<div class="empty-state">暂无 ROI<br>在左侧图片上拖拽框选</div>';
+    bottomList.innerHTML = '<div class="empty-state">暂无 ROI，在上方图片上拖拽框选</div>';
+    return;
+  }
+  
+  // Build HTML for both panels
+  let html = '';
+  sorted.forEach((item, orderIdx) => {
+    const roiId = item.srcIndex;
+    const title = roiTitles[roiId] || '';
+    html += `
+      <div class="roi-item" data-id="${roiId}">
+        <div class="roi-item-header">
+          <span class="roi-number">ROI ${orderIdx + 1}</span>
+          <button class="roi-delete" onclick="deleteRoi(${roiId})" title="删除">×</button>
+        </div>
+        <label>标题备注</label>
+        <input type="text" 
+               placeholder="输入标题..." 
+               value="${title}" 
+               onchange="updateRoiTitle(${roiId}, this.value)"
+               oninput="updateRoiTitle(${roiId}, this.value)">
+      </div>
+    `;
+  });
+  rightList.innerHTML = html;
+  
+  // Bottom panel (horizontal)
+  let bottomHtml = '';
+  sorted.forEach((item, orderIdx) => {
+    const roiId = item.srcIndex;
+    const title = roiTitles[roiId] || '';
+    bottomHtml += `
+      <div class="bottom-roi-item" data-id="${roiId}">
+        <div class="roi-item-header">
+          <span class="roi-number">ROI ${orderIdx + 1}</span>
+          <button class="roi-delete" onclick="deleteRoi(${roiId})" title="删除">×</button>
+        </div>
+        <input type="text" 
+               placeholder="输入标题..." 
+               value="${title}" 
+               onchange="updateRoiTitle(${roiId}, this.value)"
+               oninput="updateRoiTitle(${roiId}, this.value)">
+      </div>
+    `;
+  });
+  bottomList.innerHTML = bottomHtml;
+}
+
+function updateRoiTitle(roiId, value){
+  roiTitles[roiId] = value.trim();
+  render();
+}
+
+function deleteRoi(roiId){
+  rois.splice(roiId, 1);
+  // Rebuild titles
+  const newTitles = {};
+  rois.forEach((_, idx) => {
+    newTitles[idx] = roiTitles[idx] || '';
+  });
+  roiTitles = newTitles;
+  updateRoiList();
+  render();
+}
+
+// Canvas events
+canvas.addEventListener("pointerdown", e => {
+  if(!img) return;
+  const p = pointer(e);
+  if(!insideImage(p)) return;
+  drawing = { start:p, current:p, x:0, y:0, size:0 };
+});
+
+canvas.addEventListener("pointermove", e => {
+  if(!drawing) return;
+  drawing.current = pointer(e);
+  const roi = makeSquareROI(drawing.start, drawing.current);
+  Object.assign(drawing, roi);
+  render();
+});
+
+window.addEventListener("pointerup", () => {
+  if(!drawing) return;
+  if(drawing.size > 8){
+    rois.push({
+      x:drawing.x,
+      y:drawing.y,
+      size:drawing.size
+    });
+    updateRoiList();
+  }
+  drawing = null;
+  render();
+});
+
+// File upload
+document.getElementById("upload").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+
+  imgName = file.name.replace(/.[^.]+$/, "") || "roi-result";
+
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+
+  im.onload = () => {
+    img = im;
+    rois = [];
+    roiTitles = {};
+    drawing = null;
+    fitImage(im.naturalWidth, im.naturalHeight);
+    updateRoiList();
+    render();
+    URL.revokeObjectURL(url);
+  };
+
+  im.src = url;
+});
+
+// Clear button
+document.getElementById("clear").onclick = () => {
+  rois = [];
+  roiTitles = {};
+  drawing = null;
+  updateRoiList();
+  render();
+};
+
+// Export button
+document.getElementById("export").onclick = () => {
+  if(!img) return;
+  render();
+
+  const a = document.createElement("a");
+  a.download = imgName + "-roi.png";
+  a.href = canvas.toDataURL("image/png");
+  a.click();
+};
+
+// Init
+canvas.width = 960;
+canvas.height = 560;
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片压缩工具</title>
+<style>
+:root{
+--primary:#4f46e5;
+--primary-hover:#4338ca;
+--primary-light:#eef2ff;
+--green:#059669;
+--green-light:#ecfdf5;
+--green-border:#a7f3d0;
+--red:#dc2626;
+--red-light:#fef2f2;
+--red-border:#fecaca;
+--text:#111827;
+--text-secondary:#6b7280;
+--text-muted:#9ca3af;
+--border:#e5e7eb;
+--bg:#f3f4f6;
+--card-bg:#fff;
+--shadow:0 1px 3px rgba(0,0,0,.06),0 6px 16px rgba(0,0,0,.04);
+--radius:16px;
+--radius-sm:10px;
+--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:24px;font-family:var(--font);color:var(--text)}
+.card{background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;width:100%;max-width:800px;position:relative;overflow:hidden;transition:filter .4s}
+.card.loading{pointer-events:none}
+h1{font-size:16px;font-weight:700;margin-bottom:20px}
+.layout{display:flex;gap:24px}
+.left{width:200px;flex-shrink:0}
+.right{flex:1;min-width:0;display:flex;flex-direction:column}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-sm);text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;min-height:200px;position:relative;overflow:hidden}
+.upload-zone::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--primary-light),transparent 60%);opacity:0;transition:opacity .2s}
+.upload-zone:hover::before,.upload-zone.dragover::before{opacity:1}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--primary)}
+.upload-zone.has-image{padding:10px;border-style:solid;border-color:var(--border);background:var(--card-bg)}
+.upload-zone.has-image::before{display:none}
+.upload-zone.has-image:hover{border-color:var(--primary)}
+.upload-icon{width:40px;height:40px;fill:none;stroke:var(--text-muted);stroke-width:1.5;margin-bottom:8px;position:relative}
+.upload-zone.has-image .upload-icon{display:none}
+.upload-text{color:var(--text-secondary);font-size:13px;line-height:1.5;position:relative}
+.upload-zone.has-image .upload-text{display:none}
+.preview-area{display:none;width:100%;position:relative}
+.upload-zone.has-image .preview-area{display:block}
+.preview-img{max-width:100%;max-height:160px;border-radius:8px;display:block;margin:0 auto}
+.reupload-hint{display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:8px;color:#fff;font-size:12px;font-weight:500;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.upload-zone.has-image .preview-area:hover .reupload-hint{display:flex}
+.file-info{font-size:12px;color:var(--text-secondary);text-align:center;margin-top:8px;word-break:break-all;line-height:1.4}
+.dim-info{font-size:11px;color:var(--text-muted);text-align:center;margin-top:2px}
+.controls{display:none;flex-direction:column;flex:1;justify-content:center}
+.controls.show{display:flex}
+.slider-card{background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px}
+.slider-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.slider-target{font-size:13px;font-weight:600;color:var(--text)}
+.slider-display{text-align:right}
+.slider-val{font-size:24px;font-weight:700;color:var(--primary);letter-spacing:-.5px}
+.slider-pct{font-size:12px;color:var(--text-muted);margin-top:1px}
+.slider-wrap{position:relative;padding:0 2px}
+.slider-wrap input[type=range]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:6px;cursor:pointer}
+.slider-wrap input[type=range]::-webkit-slider-runnable-track{height:6px;background:#d1d5db;border-radius:3px}
+.slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-top:-6px;cursor:pointer;transition:.1s}
+.slider-wrap input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.1)}
+.slider-wrap input[type=range]::-moz-range-track{height:6px;background:#d1d5db;border-radius:3px;border:none}
+.slider-wrap input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+.slider-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);box-shadow:0 2px 8px rgba(79,70,229,.3)}
+.btn-primary:disabled{background:#c4c9d4;box-shadow:none;cursor:not-allowed}
+.btn-download{background:var(--green);color:#fff}
+.btn-download:hover{background:#047857;box-shadow:0 2px 8px rgba(5,150,101,.3)}
+.result{display:block;margin-top:12px;max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .35s ease .1s}
+.result.open{max-height:300px;opacity:1}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{background:var(--green-light);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.result.fail .stat-box{background:var(--red-light)}
+.stat-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-num{font-size:20px;font-weight:700;color:var(--text)}
+.stat-num-green{color:var(--green)}
+.result.fail .stat-num{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--text-secondary);margin-top:3px}
+.download-wrap{margin-top:10px}
+footer{text-align:center;margin-top:16px;font-size:11px;color:var(--text-muted)}
+.overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;border-radius:var(--radius);background:rgba(255,255,255,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.overlay.show{display:flex}
+.spinner{width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.overlay-inner{display:flex;flex-direction:column;align-items:center;gap:12px}
+.overlay-text{font-size:14px;font-weight:600;color:var(--text)}
+.overlay-sub{font-size:12px;color:var(--text-muted)}
+.drop-overlay{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.03);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s ease,visibility .3s ease,background .3s ease,backdrop-filter .3s ease,-webkit-backdrop-filter .3s ease}
+.drop-overlay.show{opacity:1;visibility:visible;pointer-events:auto;background:rgba(0,0,0,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.drop-overlay-inner{display:flex;flex-direction:column;align-items:center;gap:14px;background:var(--card-bg);border-radius:16px;padding:36px 48px;box-shadow:var(--shadow);border:2px dashed var(--primary)}
+.drop-overlay-icon{width:44px;height:44px;fill:none;stroke:var(--primary);stroke-width:1.5}
+.drop-overlay-text{font-size:18px;font-weight:700;color:var(--primary)}
+.drop-overlay-sub{font-size:13px;color:var(--text-secondary)}
+@media(max-width:640px){
+body{padding:16px}
+.card{padding:20px}
+.layout{flex-direction:column;gap:16px}
+.left{width:100%}
+.upload-zone{min-height:140px}
+}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+<h1>图片压缩</h1>
+<div class="layout">
+<div class="left">
+<div class="upload-zone" id="dropZone">
+<svg class="upload-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div class="upload-text">点击或拖拽<br>图片到此处</div>
+<div class="preview-area">
+<img class="preview-img" id="preview" alt="">
+<div class="reupload-hint">点击更换</div>
+<div class="file-info" id="fileInfo"></div>
+<div class="dim-info" id="dimInfo"></div>
+</div>
+</div>
+</div>
+<div class="right" id="rightPanel">
+<div class="controls" id="controls">
+<div class="slider-card">
+<div class="slider-header">
+<span class="slider-target">压缩至不超过</span>
+<div class="slider-display">
+<div class="slider-val" id="sliderVal">90 KB</div>
+<div class="slider-pct" id="sliderPct"></div>
+</div>
+</div>
+<div class="slider-wrap">
+<input type="range" id="sizeSlider" min="10" max="500" value="90">
+</div>
+<div class="slider-labels">
+<span id="sliderLeft">10 KB</span>
+<span id="sliderRight">500 KB</span>
+</div>
+</div>
+<button class="btn btn-primary" id="compressBtn" disabled>开始压缩</button>
+<div class="result" id="result">
+<div class="result-grid">
+<div class="stat-box">
+<div class="stat-label">压缩前</div>
+<div class="stat-num" id="origSize">-</div>
+</div>
+<div class="stat-box">
+<div class="stat-label">压缩后</div>
+<div class="stat-num stat-num-green" id="compSize">-</div>
+<div class="stat-sub" id="dimsAfter"></div>
+</div>
+</div>
+<div class="download-wrap">
+<button class="btn btn-download" id="downloadBtn">下载压缩后的图片</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer>纯浏览器端处理，图片不会上传到任何服务器</footer>
+<div class="overlay" id="overlay">
+<div class="overlay-inner">
+<div class="spinner"></div>
+<div class="overlay-text">正在压缩</div>
+<div class="overlay-sub">调整质量与尺寸中...</div>
+</div>
+</div>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+<div class="drop-overlay-inner">
+<svg class="drop-overlay-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div class="drop-overlay-text">松开鼠标即可放入图片</div>
+<div class="drop-overlay-sub">可拖放到页面任意位置</div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const dz=$('dropZone'),pv=$('preview'),fi=$('fileInfo'),di=$('dimInfo');
+const ct=$('controls'),ss=$('sizeSlider');
+const sv=$('sliderVal'),sp=$('sliderPct'),sl=$('sliderLeft'),sr=$('sliderRight');
+const cb=$('compressBtn'),r=$('result');
+const os=$('origSize'),cs=$('compSize'),da=$('dimsAfter');
+const db=$('downloadBtn'),card=$('card'),overlay=$('overlay');
+
+let file=null,blob=null,orig=0;
+
+function fmt(b){return b<1024?b+' B':(b/1024).toFixed(1)+' KB'}
+
+function upd(){
+const v=+ss.value,m=+ss.max,p=orig?Math.round(v/(orig/1024)*100):0;
+sv.textContent=v+' KB';sp.textContent=p?'（原图的 '+p+'%）':'';
+sl.textContent=ss.min+' KB';sr.textContent=m+' KB';
+}
+
+function load(f){
+if(!f||!f.type.startsWith('image/'))return;
+file=f;orig=f.size;
+const rdr=new FileReader();
+rdr.onload=e=>{
+pv.src=e.target.result;
+pv.onload=()=>{di.textContent=pv.naturalWidth+'x'+pv.naturalHeight};
+fi.textContent=f.name+' '+fmt(f.size);
+dz.classList.add('has-image');ct.classList.add('show');
+cb.disabled=false;cb.textContent='开始压缩';r.style.display='block';r.classList.remove('open');
+const mk=Math.ceil(orig/1024);ss.max=mk;
+if(+ss.value>mk)ss.value=mk;
+upd();
+};
+rdr.readAsDataURL(f);
+}
+
+dz.addEventListener('click',()=>{
+const i=document.createElement('input');
+i.type='file';i.accept='image/*';
+i.onchange=()=>{if(i.files[0])load(i.files[0])};
+i.click();
+});
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])});
+
+ss.addEventListener('input',upd);
+
+cb.addEventListener('click',async function(){
+this.disabled=true;card.classList.add('loading');overlay.classList.add('show');r.classList.remove('open');
+const kb=+ss.value,target=Math.min(kb*1024,orig-1),mt=file.type||'image/jpeg';
+const img=new Image();img.src=pv.src;await new Promise(r=>{img.onload=r});
+const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(img,0,0);
+let best=null;
+for(let q=92;q>=6;q-=6){const b=await new Promise(r=>c.toBlob(r,mt,q/100));if(b&&b.size<=target){best={blob:b,scale:1};break}}
+if(!best){for(let s=.92;s>=.06;s-=.06){let w=Math.round(img.naturalWidth*s),h=Math.round(img.naturalHeight*s);let n=document.createElement('canvas');n.width=w;n.height=h;let nx=n.getContext('2d');nx.imageSmoothingQuality='high';nx.drawImage(img,0,0,w,h);for(let q=80;q>=6;q-=6){const b=await new Promise(r=>n.toBlob(r,mt,q/100));if(b&&b.size<=target){best={blob:b,scale:s};break}}if(best)break}}
+card.classList.remove('loading');overlay.classList.remove('show');
+if(best){
+blob=best.blob;r.className='result';
+os.textContent=fmt(orig);cs.textContent=fmt(best.blob.size);
+da.textContent=best.scale<1?Math.round(img.naturalWidth*best.scale)+'x'+Math.round(img.naturalHeight*best.scale):'';
+setTimeout(()=>r.classList.add('open'),50);
+}else{
+r.className='result fail';os.textContent=fmt(orig);cs.textContent='---';da.textContent='无法达到目标大小';setTimeout(()=>r.classList.add('open'),50);
+}
+this.disabled=false;this.textContent='重新压缩';
+});
+
+db.addEventListener('click',()=>{
+if(!blob)return;
+const e=file.name.replace(/^.*\./,''),n=file.name.replace(/\.[^.]+$/,'')+'_compressed.'+(e.match(/^(jpg|jpeg|png|webp)$/i)?e:'jpg');
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=n;a.click();
+});
+
+/* 全屏拖拽：页面任意位置拖入图片，延迟淡入模糊提示可松手 */
+const dropOverlay=$('dropOverlay');
+let dragDepth=0,showTimer=null;
+function hideDropOverlay(){
+if(showTimer){clearTimeout(showTimer);showTimer=null}
+dropOverlay.classList.remove('show');
+}
+window.addEventListener('dragenter',e=>{
+e.preventDefault();
+if(!e.dataTransfer||!Array.from(e.dataTransfer.types||[]).includes('Files'))return;
+dragDepth++;
+if(!showTimer)showTimer=setTimeout(()=>{dropOverlay.classList.add('show');showTimer=null},40);
+});
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('dragleave',e=>{
+if(dragDepth>0)dragDepth--;
+if(dragDepth===0)hideDropOverlay();
+});
+window.addEventListener('drop',e=>{
+e.preventDefault();
+dragDepth=0;hideDropOverlay();
+if(e.dataTransfer&&e.dataTransfer.files[0])load(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>

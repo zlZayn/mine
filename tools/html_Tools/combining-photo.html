@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专业级图片拼贴工作台</title>
+    <style>
+        :root {
+            --panel-bg: #2c2c2c;
+            --workspace-bg: #121212;
+            --accent: #007aff;
+            --text: #e0e0e0;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: var(--workspace-bg);
+            color: var(--text);
+            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+        }
+
+        /* 顶部导航栏 */
+        #header {
+            height: 60px;
+            background: var(--panel-bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            border-bottom: 1px solid #3d3d3d;
+        }
+
+        .logo { font-weight: 600; letter-spacing: 1px; color: var(--accent); }
+
+        .controls { display: flex; gap: 12px; }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-upload { background: #404040; color: white; }
+        .btn-upload:hover { background: #505050; }
+        .btn-save { background: var(--accent); color: white; }
+        .btn-save:hover { background: #0063d1; box-shadow: 0 0 10px rgba(0,122,255,0.4); }
+        .btn-danger { background: transparent; color: #ff453a; }
+        .btn-danger:hover { background: rgba(255,69,58,0.1); }
+
+        /* 画布工作区 */
+        #workspace {
+            height: calc(100vh - 60px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto; /* 允许大拼贴时出现滚动条 */
+            padding: 50px;
+            box-sizing: border-box;
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            background-color: white;
+            /* 透明网格背景 */
+            background-image: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                              linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                              linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        canvas { cursor: move; }
+
+        /* 状态提示 */
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 6px 15px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #888;
+            pointer-events: none;
+        }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+
+<header id="header">
+    <div class="logo">COLLAGE STUDIO PRO</div>
+    <div class="controls">
+        <button class="btn btn-upload" onclick="document.getElementById('file-input').click()">
+            <span>+</span> 导入图片
+        </button>
+        <button class="btn btn-danger" onclick="clearAll()">清空工作区</button>
+        <button class="btn btn-save" onclick="exportFinal()">保存作品</button>
+    </div>
+</header>
+
+<main id="workspace">
+    <div id="canvas-wrapper">
+        <canvas id="canvas"></canvas>
+    </div>
+</main>
+
+<div class="status-bar">
+    拖拽移动 · 边缘吸附 · 选中后按 Delete 删除 · 滚轮缩放(开发中)
+</div>
+
+<input type="file" id="file-input" multiple accept="image/*">
+
+<script>
+/**
+ * 高级图片拼贴核心脚本
+ */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const wrapper = document.getElementById('canvas-wrapper');
+
+// 核心状态
+let layers = [];
+let activeLayer = null;
+let isDragging = false;
+let isResizing = false;
+let dragOffset = { x: 0, y: 0 };
+let guides = { x: null, y: null }; // 存储吸附线坐标
+
+// 画布尺寸设置
+const WORLD_SIZE = { 
+    w: 1600, 
+    h: 1200 
+};
+
+function initCanvas() {
+    canvas.width = WORLD_SIZE.w;
+    canvas.height = WORLD_SIZE.h;
+    wrapper.style.width = WORLD_SIZE.w + 'px';
+    wrapper.style.height = WORLD_SIZE.h + 'px';
+    draw();
+}
+
+class ImageLayer {
+    constructor(img, x, y) {
+        this.img = img;
+        this.ratio = img.width / img.height;
+        
+        // 初始大小逻辑：确保不超出画布一半
+        const maxInitialW = canvas.width * 0.4;
+        const maxInitialH = canvas.height * 0.4;
+        
+        this.w = img.width;
+        this.h = img.height;
+
+        if (this.w > maxInitialW) {
+            this.w = maxInitialW;
+            this.h = this.w / this.ratio;
+        }
+        if (this.h > maxInitialH) {
+            this.h = maxInitialH;
+            this.w = this.h * this.ratio;
+        }
+
+        this.x = x - this.w/2;
+        this.y = y - this.h/2;
+    }
+
+    draw() {
+        ctx.save();
+        // 阴影效果
+        if (activeLayer === this) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = 'rgba(0,122,255,0.5)';
+        }
+        
+        ctx.drawImage(this.img, this.x, this.y, this.w, this.h);
+        
+        // 选中态 UI
+        if (activeLayer === this) {
+            ctx.strokeStyle = '#007aff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+            
+            // 绘制缩放手柄
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(this.x + this.w, this.y + this.h, 8, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    contains(px, py) {
+        return px > this.x && px < this.x + this.w && py > this.y && py < this.y + this.h;
+    }
+
+    isHandle(px, py) {
+        const hx = this.x + this.w;
+        const hy = this.y + this.h;
+        return Math.sqrt((px-hx)**2 + (py-hy)**2) < 15;
+    }
+}
+
+// 图片加载处理
+document.getElementById('file-input').onchange = function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            // 在画布中心生成
+            const layer = new ImageLayer(img, canvas.width/2, canvas.height/2);
+            layers.push(layer);
+            activeLayer = layer;
+            draw();
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+    });
+};
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. 绘制图片层
+    layers.forEach(l => l.draw());
+
+    // 2. 绘制吸附辅助线
+    if (guides.x !== null) {
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#ff453a';
+        ctx.moveTo(guides.x, 0);
+        ctx.lineTo(guides.x, canvas.height);
+        ctx.stroke();
+    }
+    if (guides.y !== null) {
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = '#ff453a';
+        ctx.moveTo(0, guides.y);
+        ctx.lineTo(canvas.width, guides.y);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+// 智能吸附计算
+function doSnapping(target) {
+    const SNAP_DIST = 12;
+    guides = { x: null, y: null };
+
+    const snapPointsX = [0, canvas.width/2, canvas.width];
+    const snapPointsY = [0, canvas.height/2, canvas.height];
+
+    // 加入其他图层的边缘
+    layers.forEach(l => {
+        if (l === target) return;
+        snapPointsX.push(l.x, l.x + l.w, l.x + l.w/2);
+        snapPointsY.push(l.y, l.y + l.h, l.y + l.h/2);
+    });
+
+    // 检查 X
+    let tx = target.x;
+    let tw = target.w;
+    let checkX = [tx, tx + tw, tx + tw/2];
+    
+    for (let p of snapPointsX) {
+        for (let c of checkX) {
+            if (Math.abs(c - p) < SNAP_DIST) {
+                target.x += (p - c);
+                guides.x = p;
+                break;
+            }
+        }
+        if (guides.x !== null) break;
+    }
+
+    // 检查 Y
+    let ty = target.y;
+    let th = target.h;
+    let checkY = [ty, ty + th, ty + th/2];
+
+    for (let p of snapPointsY) {
+        for (let c of checkY) {
+            if (Math.abs(c - p) < SNAP_DIST) {
+                target.y += (p - c);
+                guides.y = p;
+                break;
+            }
+        }
+        if (guides.y !== null) break;
+    }
+}
+
+// 事件监听
+canvas.onmousedown = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // 先检测手柄
+    if (activeLayer && activeLayer.isHandle(mx, my)) {
+        isResizing = true;
+        return;
+    }
+
+    // 检测图层点击 (从上往下)
+    let found = false;
+    for (let i = layers.length - 1; i >= 0; i--) {
+        if (layers[i].contains(mx, my)) {
+            activeLayer = layers[i];
+            // 提升图层
+            layers.splice(i, 1);
+            layers.push(activeLayer);
+            isDragging = true;
+            dragOffset.x = mx - activeLayer.x;
+            dragOffset.y = my - activeLayer.y;
+            found = true;
+            break;
+        }
+    }
+    if (!found) activeLayer = null;
+    draw();
+};
+
+window.onmousemove = (e) => {
+    if (!activeLayer) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (isDragging) {
+        activeLayer.x = mx - dragOffset.x;
+        activeLayer.y = my - dragOffset.y;
+        doSnapping(activeLayer);
+    } else if (isResizing) {
+        const newW = mx - activeLayer.x;
+        if (newW > 30) {
+            activeLayer.w = newW;
+            activeLayer.h = newW / activeLayer.ratio;
+            doSnapping(activeLayer);
+        }
+    }
+    draw();
+};
+
+window.onmouseup = () => {
+    isDragging = false;
+    isResizing = false;
+    guides = { x: null, y: null };
+    draw();
+};
+
+window.onkeydown = (e) => {
+    if (e.key === "Delete" || e.key === "Backspace") {
+        if (activeLayer) {
+            layers = layers.filter(l => l !== activeLayer);
+            activeLayer = null;
+            draw();
+        }
+    }
+};
+
+function clearAll() {
+    if(confirm("确定清空所有图片？")) {
+        layers = [];
+        activeLayer = null;
+        draw();
+    }
+}
+
+function exportFinal() {
+    if (layers.length === 0) return;
+    
+    // 查找内容边界
+    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+    layers.forEach(l => {
+        minX = Math.min(minX, l.x);
+        minY = Math.min(minY, l.y);
+        maxX = Math.max(maxX, l.x + l.w);
+        maxY = Math.max(maxY, l.y + l.h);
+    });
+
+    const tempCanvas = document.createElement('canvas');
+    const p = 20; // 边距
+    tempCanvas.width = (maxX - minX) + p*2;
+    tempCanvas.height = (maxY - minY) + p*2;
+    const tCtx = tempCanvas.getContext('2d');
+
+    layers.forEach(l => {
+        tCtx.drawImage(l.img, l.x - minX + p, l.y - minY + p, l.w, l.h);
+    });
+
+    const link = document.createElement('a');
+    link.download = 'collage_export.png';
+    link.href = tempCanvas.toDataURL();
+    link.click();
+}
+
+// 启动
+initCanvas();
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Flux Master - Ethereal Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #020617;
+            --bg-panel: rgba(15, 23, 42, 0.85);
+            --bg-card: rgba(30, 41, 59, 0.5);
+            --bg-sub-card: rgba(15, 23, 42, 0.4);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --accent: #06b6d4;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-md: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-ui: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
+
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 320px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(24px);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 16px; z-index: 100;
+            overflow-y: auto; gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 10px; padding-left: 4px; margin-bottom: 12px; }
+        .logo-area h1 { 
+            font-size: 0.95rem; margin: 0; font-weight: 800; 
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        }
+
+        /* Accordion Styling */
+        details {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        details[open] {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(30, 41, 59, 0.7);
+        }
+        summary {
+            list-style: none;
+            padding: 12px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after {
+            content: "＋";
+            font-size: 0.8rem;
+            transition: transform 0.3s;
+        }
+        details[open] summary::after {
+            content: "－";
+        }
+        .card-inner { padding: 0 12px 12px 12px; }
+
+        /* --- Inputs & Interactive Rows --- */
+        .interactive-row {
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.2); 
+            padding: 10px; cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            border-top: 1px solid var(--border);
+            min-height: 38px;
+        }
+        .interactive-row:first-child { border-top: none; }
+        .interactive-row:hover { background: rgba(255,255,255,0.05); }
+        .interactive-row label { cursor: pointer; font-size: 0.75rem; font-weight: 700; z-index: 1; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .interactive-row input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; margin-top: 10px;}
+        .label-row:first-child { margin-top: 0; }
+        .label-row label { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); }
+        .label-row .val { font-family: var(--font-mono); font-size: 0.65rem; color: var(--primary); }
+
+        input[type="range"] { 
+            -webkit-appearance: none; width: 100%; height: 3px; 
+            background: rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; 
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 10px; height: 10px; 
+            background: #fff; border-radius: 50%; border: 2px solid var(--primary); 
+            transition: transform 0.1s;
+        }
+
+        input[type="number"] { 
+            width: 100%; background: var(--bg-deep); border: 1px solid var(--border); 
+            color: #fff; padding: 6px 8px; border-radius: 4px; 
+            font-size: 0.75rem; font-family: var(--font-mono);
+            transition: var(--transition);
+        }
+        input[type="number"]:focus { border-color: var(--primary); }
+
+        .select-wrapper { position: relative; width: 100%; }
+        select { 
+            width: 100%; background: var(--bg-deep); border: 1px solid var(--border); 
+            color: #fff; padding: 8px 10px; border-radius: 4px; font-size: 0.7rem; 
+            font-family: inherit; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+        }
+
+        .lock-toggle { 
+            background: var(--bg-deep); border: 1px solid var(--border); color: var(--text-muted); 
+            min-width: 32px; height: 28px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 4px; cursor: pointer;
+        }
+        .lock-toggle.active { color: var(--primary); border-color: var(--primary); background: rgba(139, 92, 246, 0.1); }
+
+        .btn-group { display: flex; gap: 8px; margin-top: auto; padding-top: 16px; }
+        .btn {
+            border: none; padding: 12px; border-radius: var(--radius-md); font-weight: 800;
+            font-size: 0.75rem; cursor: pointer; transition: var(--transition);
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #1e1b4b; flex: 2; }
+        .btn-secondary { background: var(--bg-card); color: var(--text-muted); flex: 1; border: 1px solid var(--border); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+
+        /* --- Viewport --- */
+        .viewport { 
+            flex: 1; background: #000; display: flex; 
+            align-items: center; justify-content: center; 
+            position: relative; overflow: hidden; 
+        }
+        .viewport::before {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+            z-index: 0; opacity: 1; transition: opacity 0.3s;
+        }
+        .viewport.has-bg::before { opacity: 0; }
+        .canvas-scaler { position: relative; z-index: 1; transition: transform 0.1s linear; }
+        canvas { 
+            display: block; 
+            background-image: linear-gradient(45deg, #0f172a 25%, transparent 25%), linear-gradient(-45deg, #0f172a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #0f172a 75%), linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+            background-size: 20px 20px;
+        }
+        .dim-tag {
+            position: absolute; bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.6); color: var(--text-muted);
+            font-family: var(--font-mono); font-size: 0.6rem;
+            padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo-area">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
+        <h1>NEBULA FLUX</h1>
+    </div>
+
+    <details open>
+        <summary>Dimensions</summary>
+        <div class="card-inner">
+            <div class="label-row"><label>Canvas Size (PX)</label></div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="number" id="i-w" value="1920">
+                <button class="lock-toggle" id="btn-lock" title="Lock Aspect Ratio">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </button>
+                <input type="number" id="i-h" value="1080">
+            </div>
+        </div>
+    </details>
+
+    <details open>
+        <summary>Flux Dynamics</summary>
+        <div class="card-inner">
+            <div class="label-row"><label>Flow Density</label><span class="val" id="v-lines">50</span></div>
+            <input type="range" id="i-lines" min="10" max="200" value="50">
+
+            <div class="label-row"><label>Chaos (Amplitude)</label><span class="val" id="v-chaos">150</span></div>
+            <input type="range" id="i-chaos" min="10" max="500" value="150">
+
+            <div class="label-row"><label>Wave Frequency</label><span class="val" id="v-freq">0.01</span></div>
+            <input type="range" id="i-freq" min="1" max="100" value="10">
+
+            <div class="label-row"><label>Phase Offset</label><span class="val" id="v-offset">0</span></div>
+            <input type="range" id="i-offset" min="0" max="200" value="0">
+        </div>
+    </details>
+
+    <details>
+        <summary>Ethereal Styling</summary>
+        <div class="card-inner">
+            <div class="label-row"><label>Blend Mode</label></div>
+            <div class="select-wrapper">
+                <select id="i-blend">
+                    <option value="source-over">Standard (Cover)</option>
+                    <option value="screen">Screen (Soft Light)</option>
+                    <option value="lighter">Add (Neon Glow)</option>
+                    <option value="overlay">Overlay</option>
+                    <option value="xor">XOR (Digital glitch)</option>
+                </select>
+            </div>
+
+            <div class="label-row"><label>Line Width</label><span class="val" id="v-width">2px</span></div>
+            <input type="range" id="i-width" min="0.5" max="20" step="0.5" value="2">
+
+            <div class="label-row"><label>Glow Strength</label><span class="val" id="v-blur">20</span></div>
+            <input type="range" id="i-blur" min="0" max="100" value="20">
+
+            <div class="label-row"><label>Opacity</label><span class="val" id="v-alpha">0.3</span></div>
+            <input type="range" id="i-alpha" min="0.05" max="1" step="0.05" value="0.3">
+        </div>
+    </details>
+
+    <details>
+        <summary>Chromatic Alchemy</summary>
+        <div style="border-radius: 4px; overflow: hidden; border: 1px solid var(--border);">
+            <div class="interactive-row" id="row-c1"><label>Start Color</label><input type="color" id="i-c1" value="#8b5cf6"></div>
+            <div class="interactive-row" id="row-c2"><label>Mid Color</label><input type="color" id="i-c2" value="#3b82f6"></div>
+            <div class="interactive-row" id="row-c3"><label>End Color</label><input type="color" id="i-c3" value="#06b6d4"></div>
+            <div class="interactive-row" id="row-bg" style="border-top: 2px solid var(--border)"><label>Background</label><input type="color" id="i-bg" value="#020617"></div>
+        </div>
+    </details>
+
+    <div class="btn-group">
+        <button class="btn btn-secondary" id="btn-random">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+            RANDOM
+        </button>
+        <button class="btn btn-primary" id="btn-export">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            EXPORT
+        </button>
+    </div>
+</aside>
+
+<main class="viewport" id="viewport">
+    <div class="canvas-scaler" id="scaler">
+        <canvas id="canvas"></canvas>
+    </div>
+    <div class="dim-tag" id="v-dim">1920 × 1080 PX</div>
+</main>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const scaler = document.getElementById('scaler');
+    const viewport = document.getElementById('viewport');
+
+    const ui = {
+        w: document.getElementById('i-w'),
+        h: document.getElementById('i-h'),
+        lock: document.getElementById('btn-lock'),
+        lines: document.getElementById('i-lines'),
+        chaos: document.getElementById('i-chaos'),
+        freq: document.getElementById('i-freq'),
+        offset: document.getElementById('i-offset'),
+        blend: document.getElementById('i-blend'),
+        width: document.getElementById('i-width'),
+        blur: document.getElementById('i-blur'),
+        alpha: document.getElementById('i-alpha'),
+        c1: document.getElementById('i-c1'),
+        c2: document.getElementById('i-c2'),
+        c3: document.getElementById('i-c3'),
+        bg: document.getElementById('i-bg'),
+        exportBtn: document.getElementById('btn-export'),
+        randomBtn: document.getElementById('btn-random')
+    };
+
+    const displayVals = {
+        lines: document.getElementById('v-lines'),
+        chaos: document.getElementById('v-chaos'),
+        freq: document.getElementById('v-freq'),
+        offset: document.getElementById('v-offset'),
+        width: document.getElementById('v-width'),
+        blur: document.getElementById('v-blur'),
+        alpha: document.getElementById('v-alpha'),
+        dim: document.getElementById('v-dim')
+    };
+
+    let isLocked = false;
+    let lockRatio = 16/9;
+
+    function getContrastYIQ(hexcolor){
+        hexcolor = hexcolor.replace("#", "");
+        var r = parseInt(hexcolor.substr(0,2),16);
+        var g = parseInt(hexcolor.substr(2,2),16);
+        var b = parseInt(hexcolor.substr(4,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000' : '#fff';
+    }
+
+    function updateColorRow(input) {
+        const row = input.parentElement;
+        row.style.backgroundColor = input.value;
+        row.style.color = getContrastYIQ(input.value);
+    }
+
+    function fitCanvas() {
+        const padding = 60;
+        const availableW = viewport.clientWidth - padding;
+        const availableH = viewport.clientHeight - padding;
+        const realW = canvas.width;
+        const realH = canvas.height;
+        const scale = Math.min(availableW / realW, availableH / realH, 1);
+        scaler.style.transform = `scale(${scale})`;
+    }
+
+    function render() {
+        const W = parseInt(ui.w.value) || 100;
+        const H = parseInt(ui.h.value) || 100;
+        canvas.width = W;
+        canvas.height = H;
+        displayVals.dim.innerText = `${W} × ${H} PX`;
+
+        const bgColor = ui.bg.value;
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+        viewport.classList.toggle('has-bg', true); 
+
+        const count = parseInt(ui.lines.value);
+        const chaos = parseInt(ui.chaos.value);
+        const freqBase = parseInt(ui.freq.value) * 0.0005; 
+        const phaseOffset = parseInt(ui.offset.value) / 10;
+        const width = parseFloat(ui.width.value);
+        const blur = parseInt(ui.blur.value);
+        const opacity = parseFloat(ui.alpha.value);
+
+        ctx.globalCompositeOperation = ui.blend.value;
+        ctx.shadowBlur = blur;
+        ctx.shadowColor = ui.c2.value; 
+        ctx.lineWidth = width;
+        ctx.globalAlpha = opacity;
+
+        const gradient = ctx.createLinearGradient(0, 0, W, H);
+        gradient.addColorStop(0, ui.c1.value);
+        gradient.addColorStop(0.5, ui.c2.value);
+        gradient.addColorStop(1, ui.c3.value);
+        ctx.strokeStyle = gradient;
+
+        const step = W / 500; 
+
+        for (let i = 0; i < count; i++) {
+            ctx.beginPath();
+            const progress = i / count;
+            const centerY = H/2 + (progress - 0.5) * (H * 0.8);
+            const lineFreq = freqBase + (i % 5) * 0.0002;
+            const lineAmp = chaos * (1 - Math.abs(progress - 0.5)); 
+            const linePhase = phaseOffset + i * 0.1;
+
+            for (let x = -100; x <= W + 100; x += step) {
+                const y = centerY + 
+                          Math.sin(x * lineFreq + linePhase) * lineAmp +
+                          Math.sin(x * lineFreq * 2.5 + linePhase) * (lineAmp * 0.5);
+                
+                if (x === -100) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        updateDisplayValues();
+        fitCanvas();
+    }
+
+    function updateDisplayValues() {
+        displayVals.lines.textContent = ui.lines.value;
+        displayVals.chaos.textContent = ui.chaos.value;
+        displayVals.freq.textContent = (ui.freq.value / 100).toFixed(2);
+        displayVals.offset.textContent = ui.offset.value;
+        displayVals.width.textContent = ui.width.value + 'px';
+        displayVals.blur.textContent = ui.blur.value;
+        displayVals.alpha.textContent = ui.alpha.value;
+        [ui.c1, ui.c2, ui.c3, ui.bg].forEach(updateColorRow);
+    }
+
+    window.addEventListener('resize', fitCanvas);
+
+    Object.values(ui).forEach(el => {
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+            el.addEventListener('input', render);
+        }
+    });
+
+    ui.lock.onclick = () => {
+        isLocked = !isLocked;
+        ui.lock.classList.toggle('active', isLocked);
+        if (isLocked) lockRatio = ui.w.value / ui.h.value;
+    };
+
+    ui.w.oninput = () => {
+        if (isLocked) ui.h.value = Math.round(ui.w.value / lockRatio);
+        render();
+    };
+
+    ui.h.oninput = () => {
+        if (isLocked) ui.w.value = Math.round(ui.h.value * lockRatio);
+        render();
+    };
+
+    ui.randomBtn.onclick = () => {
+        const rand = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+        const randColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+
+        ui.lines.value = rand(20, 100);
+        ui.chaos.value = rand(50, 400);
+        ui.freq.value = rand(5, 50);
+        ui.offset.value = rand(0, 200);
+        ui.width.value = (Math.random() * 5 + 0.5).toFixed(1);
+        ui.blur.value = rand(0, 60);
+        ui.alpha.value = (Math.random() * 0.5 + 0.1).toFixed(2);
+        ui.c1.value = randColor();
+        ui.c2.value = randColor();
+        ui.c3.value = randColor();
+        ui.bg.value = Math.random() > 0.8 ? '#ffffff' : '#020617'; 
+        const modes = ['source-over', 'lighter', 'screen', 'overlay'];
+        ui.blend.value = modes[rand(0, modes.length-1)];
+        render();
+    };
+
+    ui.exportBtn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = `nebula-flux-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+    };
+
+    [ui.c1, ui.c2, ui.c3, ui.bg].forEach(updateColorRow);
+    render();
+</script>
+</body>
+</html>

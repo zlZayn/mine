@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商品边框合成工具</title>
+<style>
+/* ===== 设计变量 ===== */
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --green: #059669;
+  --green-hover: #047857;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --bg: #f3f4f6;
+  --card-bg: #fff;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ===== 基础 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  width: 100%;
+  max-width: 1120px;
+  position: relative;
+  overflow: hidden;
+  transition: filter .4s;
+}
+.card.loading { pointer-events: none; }
+
+h1 { font-size: 16px; font-weight: 700; }
+h1 small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ===== 两栏布局 ===== */
+.layout { display: flex; gap: 28px; align-items: stretch; }
+
+.left-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.right-col {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== 左栏：合成预览 ===== */
+.preview-stage {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1/1;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0;   /* 直角方形容器 */
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+}
+.stage-wrap { position: absolute; top: 0; left: 0; width: 2475px; height: 2475px; background: #fff; transform-origin: 0 0; }
+#stageImg { position: absolute; }
+#stageBorder { position: absolute; top: 0; left: 0; width: 2475px; height: 2475px; }
+#stageBorder svg { width: 100%; height: 100%; display: block; }
+.stage-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ===== 边框选项卡 ===== */
+.tabs { display: flex; gap: 6px; }
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+}
+.tab:hover { border-color: var(--primary); box-shadow: 0 1px 4px rgba(79,70,229,.12); }
+.tab.active { border-color: var(--primary); background: var(--primary-light); }
+.tab-mini {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fb;
+  flex-shrink: 0;
+}
+.tab-mini svg { width: 100%; height: 100%; display: block; }
+#mini-none { background: #fff; box-shadow: inset 0 0 0 1px var(--border); }   /* 无边框=纯白底 */
+.tab-label { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.2; white-space: nowrap; }
+.tab-sub { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+
+/* ===== 上传区（紧凑横条） ===== */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary-light), transparent 60%);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); }
+.upload-zone.has-image { padding: 8px 12px; border-style: solid; border-color: var(--border); background: var(--card-bg); }
+.upload-zone.has-image::before { display: none; }
+.upload-zone.has-image:hover { border-color: var(--primary); }
+.upload-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  flex-shrink: 0;
+  position: relative;
+}
+.upload-zone.has-image .upload-icon { display: none; }
+.upload-text { color: var(--text-secondary); font-size: 12px; line-height: 1.5; position: relative; }
+.upload-zone.has-image .upload-text { display: none; }
+.preview-area { display: none; flex: 1; min-width: 0; align-items: center; gap: 10px; position: relative; }
+.upload-zone.has-image .preview-area { display: flex; }
+.preview-img { max-width: 46px; max-height: 46px; border-radius: 6px; display: block; flex-shrink: 0; background: #fff; }
+.reupload-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.upload-zone.has-image .preview-area:hover .reupload-hint { display: flex; }
+.file-info { font-size: 11px; color: var(--text-secondary); word-break: break-all; line-height: 1.3; flex: 1; min-width: 0; }
+.dim-info { font-size: 10px; color: var(--text-muted); }
+
+/* ===== 控制区 ===== */
+.controls { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.control-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.control-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.adj-row .control-label { width: 64px; flex-shrink: 0; }   /* 固定标签宽度，滑杆对齐等长 */
+.adj-row { display: flex; align-items: center; gap: 8px; }
+.adj-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 6px;
+  cursor: pointer;
+}
+.adj-slider::-webkit-slider-runnable-track { height: 6px; background: #d1d5db; border-radius: 3px; }
+.adj-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  margin-top: -5px;
+  cursor: pointer;
+}
+.adj-slider::-moz-range-track { height: 6px; background: #d1d5db; border-radius: 3px; border: none; }
+.adj-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  cursor: pointer;
+}
+.adj-val { width: 44px; text-align: right; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ===== 格式切换 / 尺寸选择 ===== */
+.seg { display: flex; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
+.seg button {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+}
+.seg button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.size-sel {
+  width: 180px;
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.size-sel:focus { border-color: var(--primary); }
+
+/* ===== 按钮 ===== */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-hover); box-shadow: 0 2px 8px rgba(5,150,101,.3); }
+.btn-green:disabled { background: #c4c9d4; box-shadow: none; cursor: not-allowed; }
+/* 按住看原图：取景式按钮，按下时反白 */
+.btn-peek { background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary); padding: 10px; }
+.btn-peek:hover { background: #e0e7ff; }
+.btn-peek.holding, .btn-peek:active { background: var(--primary); color: #fff; }
+.btn-peek:disabled { color: #c4c9d4; border-color: #d8dce4; background: #fff; cursor: not-allowed; }
+
+/* 重置：次级弱化按钮，确认态变警示色 */
+.btn-reset { background: #fff; color: var(--text-secondary); border: 2px solid var(--border); padding: 10px; }
+.btn-reset:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-reset.confirming { background: #fef2f2; color: #dc2626; border-color: #dc2626; }
+.btn-reset:disabled { color: #c4c9d4; border-color: #d8dce4; background: #fff; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn { flex: 1; width: auto; }
+
+footer { text-align: center; margin-top: 16px; font-size: 11px; color: var(--text-muted); }
+
+/* ===== 加载遮罩 ===== */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.overlay.show { display: flex; }
+.overlay-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.overlay-text { font-size: 14px; font-weight: 600; color: var(--text); }
+.overlay-sub { font-size: 12px; color: var(--text-muted); }
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#svgStore { display: none; }
+
+/* ===== 全屏拖拽遮罩 ===== */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.03);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s ease, visibility .3s ease, background .3s ease,
+              backdrop-filter .3s ease, -webkit-backdrop-filter .3s ease;
+}
+.drop-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  background: rgba(0,0,0,.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 36px 48px;
+  box-shadow: var(--shadow);
+  border: 2px dashed var(--primary);
+}
+.drop-overlay-icon { width: 44px; height: 44px; fill: none; stroke: var(--primary); stroke-width: 1.5; }
+.drop-overlay-text { font-size: 18px; font-weight: 700; color: var(--primary); }
+.drop-overlay-sub { font-size: 13px; color: var(--text-secondary); }
+
+/* ===== 响应式 ===== */
+@media (max-width: 920px) {
+  body { padding: 16px; }
+  .card { padding: 20px; }
+  .layout { flex-direction: column; gap: 16px; }
+  .left-col, .right-col { width: 100%; }
+  .upload-zone { min-height: 56px; }
+  .tabs { flex-wrap: wrap; }
+  .tab { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div class="layout">
+
+    <!-- 左栏：合成预览 -->
+    <div class="left-col">
+      <div class="preview-stage" id="stage">
+        <div class="stage-wrap" id="stageWrap">
+          <img id="stageImg" alt="" style="display:none">
+          <div id="stageBorder"></div>
+        </div>
+        <div class="stage-empty" id="stageEmpty">请先选择边框并放入商品图</div>
+      </div>
+    </div>
+
+    <!-- 右栏：标题 / 选项卡 / 上传 / 控制 -->
+    <div class="right-col">
+      <h1>商品边框合成工具<small>选择边框 → 放入商品图 → 导出白底 1:1 图片</small></h1>
+
+      <div class="tabs" id="tabs">
+        <button class="tab" data-key="rx">
+          <span class="tab-mini" id="mini-rx"></span>
+          <span><span class="tab-label">Rx</span><br><span class="tab-sub">处方药</span></span>
+        </button>
+        <button class="tab" data-key="ja">
+          <span class="tab-mini" id="mini-ja"></span>
+          <span><span class="tab-label">甲类 OTC</span><br><span class="tab-sub">红色标识</span></span>
+        </button>
+        <button class="tab" data-key="yi">
+          <span class="tab-mini" id="mini-yi"></span>
+          <span><span class="tab-label">乙类 OTC</span><br><span class="tab-sub">绿色标识</span></span>
+        </button>
+        <button class="tab active" data-key="none">
+          <span class="tab-mini" id="mini-none"></span>
+          <span><span class="tab-label">无边框</span><br><span class="tab-sub">纯白底</span></span>
+        </button>
+      </div>
+
+      <div class="upload-zone" id="dropZone">
+        <svg class="upload-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="upload-text">点击或拖拽商品图</div>
+        <div class="preview-area">
+          <img class="preview-img" id="preview" alt="">
+          <div class="reupload-hint">点击更换</div>
+          <div class="file-info" id="fileInfo"></div>
+          <div class="dim-info" id="dimInfo"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="adj-row">
+          <span class="control-label">商品大小</span>
+          <input type="range" class="adj-slider" id="zoomSlider" min="50" max="160" value="90" step="1">
+          <span class="adj-val" id="zoomVal">90%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">亮度</span>
+          <input type="range" class="adj-slider" id="brightnessSlider" min="50" max="150" value="100" step="1">
+          <span class="adj-val" id="brightnessVal">100%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">对比度</span>
+          <input type="range" class="adj-slider" id="contrastSlider" min="50" max="150" value="100" step="1">
+          <span class="adj-val" id="contrastVal">100%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">饱和度</span>
+          <input type="range" class="adj-slider" id="saturationSlider" min="0" max="200" value="100" step="1">
+          <span class="adj-val" id="saturationVal">100%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">旋转</span>
+          <input type="range" class="adj-slider" id="rotSlider" min="-180" max="180" value="0" step="1">
+          <span class="adj-val" id="rotVal">0°</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">高光</span>
+          <input type="range" class="adj-slider" id="highlightSlider" min="-100" max="100" value="0" step="1">
+          <span class="adj-val" id="highlightVal">0</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">白色色阶</span>
+          <input type="range" class="adj-slider" id="whitesSlider" min="-100" max="100" value="0" step="1">
+          <span class="adj-val" id="whitesVal">0</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">阴影</span>
+          <input type="range" class="adj-slider" id="shadowSlider" min="-100" max="100" value="0" step="1">
+          <span class="adj-val" id="shadowVal">0</span>
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">导出格式</span>
+          <div class="seg" style="width:180px">
+            <button data-fmt="png">PNG</button>
+            <button class="active" data-fmt="jpg">JPG</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <span class="control-label">导出尺寸</span>
+          <select class="size-sel" id="sizeSel">
+            <option value="2475" selected>2475×2475</option>
+            <option value="2000">2000×2000</option>
+            <option value="1500">1500×1500</option>
+            <option value="1200">1200×1200</option>
+            <option value="1080">1080×1080</option>
+            <option value="800">800×800</option>
+            <option value="500">500×500</option>
+          </select>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-peek" id="holdBtn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            按住看原图
+          </button>
+          <button class="btn btn-reset" id="resetBtn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2-9.4L1 10"/></svg>
+            重置
+          </button>
+        </div>
+
+        <button class="btn btn-green" id="exportBtn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          导出图片
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 原图 2475×2475，可选多种导出尺寸</footer>
+
+  <!-- 加载遮罩 -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-inner">
+      <div class="spinner"></div>
+      <div class="overlay-text">正在合成</div>
+      <div class="overlay-sub">生成图片中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 三种边框源 SVG -->
+<div id="svgStore">
+<svg id="b-rx" viewBox="0 0 2475 2475" width="2475" height="2475" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" overflow="hidden"><g transform="translate(-1094 0)"><g><g><g><path d="M318.375 78.75C318.375 117.272 251.386 148.5 168.75 148.5 86.1144 148.5 19.125 117.272 19.125 78.75 19.125 40.2281 86.1144 9 168.75 9 251.386 9 318.375 40.2281 318.375 78.75Z" fill="#E60013" transform="matrix(1.00082 0 0 1 3104.11 104.25)"/><text fill="#FFFFFF" font-family="Times New Roman,Times New Roman_MSFontService,sans-serif" font-weight="700" font-size="82" transform="matrix(1.12593 0 0 1.125 3217.71 207)">Rx</text></g></g></g><path d="M2850.98 68.2083 2850.97 68.2087 1812.02 68.2087 1551.98 68.2087 1506.09 68.2087 1506.09 335.295C1506.09 372.332 1476.07 402.356 1439.03 402.356L1162.21 402.356 1162.21 457.98 1162.21 699.688 1162.21 2017.02C1162.21 2030.47 1162.89 2043.77 1164.22 2056.87L1167.33 2077.26 1167.33 2280.49C1167.33 2350.25 1223.88 2406.79 1293.63 2406.79L1817.15 2406.79 1817.15 2406.79 2850.97 2406.79 2850.98 2406.79 3374.49 2406.79C3444.25 2406.79 3500.79 2350.25 3500.79 2280.49L3500.79 2017.02 3500.79 1775.31 3500.79 699.687 3500.79 457.98 3500.79 194.507C3500.79 124.754 3444.25 68.2083 3374.49 68.2083ZM1094 0 1161.06 0 1439.03 0 3569 0 3569 2475 1094 2475 1094 335.295 1094 67.0607Z" fill="#DBE4ED" fill-rule="evenodd"/><g><g><g><path d="M149.881 267.145C172.463 291.157 199.614 295.748 229.896 287.056 315.5 231.234 195.036 115.824 149.881 85.7279 104.726 115.824-15.7389 231.234 69.8655 287.056 100.147 295.748 127.299 291.157 149.881 267.145ZM149.881 242.262C165.325 258.684 183.894 261.822 204.601 255.878 263.148 217.703 180.761 138.772 149.881 118.193 119.001 138.772 36.6138 217.703 95.1602 255.878 115.868 261.822 134.436 258.684 149.881 242.262" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M152.669 79.6321C180.769 97.5517 206.101 117.998 231.553 139.696 237.817 145.028 243.515 149.732 251.299 152.864 267.694 159.472 283.572 156.119 298.999 146.277 252.685 105.096 203.617 85.1122 152.669 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M146.332 79.6321C118.231 97.5517 92.8996 117.998 67.446 139.696 61.1836 145.028 55.4854 149.732 47.7019 152.864 31.3059 159.472 15.4289 156.119 0 146.277 46.3151 105.096 95.383 85.1122 146.332 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M140.269 226.921 140.269 149.933 159.493 149.933 159.493 226.921Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M188.375 198.039 111.387 198.039 111.387 178.815 188.375 178.815Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M46.6346 71.9854C47.1915 72.4431 48.0581 72.7444 49.2268 72.902 50.9473 73.0587 52.6989 72.9806 54.4781 72.6658 56.2004 72.2082 57.3384 71.0567 57.8941 69.2231 58.1203 68.6074 58.0348 67.9136 57.6372 67.1537 59.359 66.5394 60.5545 64.9031 61.2241 62.2448 61.3943 59.6258 60.8105 57.5573 59.473 56.0264 56.9261 54.1798 54.7769 52.9618 53.0538 52.3462 52.7844 51.1152 53.2533 50.5009 54.4781 50.5009 56.4693 51.2728 58.391 52.3462 60.2281 53.7208 61.0674 54.3365 62.2055 54.6387 63.6437 54.6387 65.2653 54.1798 66.5333 53.2632 67.4853 51.8872 67.8696 50.6576 67.9261 49.5843 67.6567 48.6539 67.4292 47.7386 66.2907 47.2015 64.2274 47.0435 61.7358 47.6591 59.1462 47.7386 56.4693 47.2796 53.5235 45.8527 51.3894 44.1369 50.0519 42.1345 51.3894 42.4492 52.9117 42.8283 54.6335 43.2864 55.4733 43.444 56.2845 43.8235 57.0535 44.4392 59.3456 46.1808 60.9539 45.6433 61.8925 42.8283 62.5617 41.1398 61.7504 38.9918 59.473 36.3862 58.5339 34.6973 58.0642 33.0096 58.0642 31.3193 57.3946 29.945 56.057 29.0945 54.0511 28.7936 51.8872 28.4788 49.4677 27.38 46.806 25.4942 44.9702 23.6484 43.3058 23.0328 41.7969 23.6484 40.3587 24.8785 39.2915 26.3581 38.6236 28.0993 37.128 30.4027 36.3176 32.7868 36.2174 35.2343 36.489 37.381 37.7691 38.769 40.0466 39.3722 42.1678 40.1446 44.2164 40.917 46.2236 41.6756 47.7178 42.1345 49.0554 43.2864 50.222 45.133 42.8775 42.8283 35.7339 40.3013 28.7884 37.539 26.8952 36.4657 25.3728 36.2295 24.2063 36.8452 23.5371 38.5342 23.1247 39.8424 22.952 40.7603 23.2236 42.2912 24.4476 43.2864 26.6249 43.7453 31.6768 45.133 36.489 46.7693 41.0418 48.6539 42.8775 49.7272 43.1344 50.6576 41.7969 51.4175 38.6236 52.0331 36.5745 53.1846 35.6337 54.8736 35.2356 57.1783 35.2922 59.2463 35.79 61.0933 37.0153 62.1666 38.4388 62.781 40.0466 62.9252 42.1678 63.24 43.8321 63.6976 45.0548 64.3133 45.5539 66.9711 46.0802 69.5245 46.6346 71.9854ZM44.6287 34.9982C44.5285 33.4672 45.1269 32.2497 46.4658 31.3193 49.5243 33.0096 51.3894 34.9982 52.0586 37.3028ZM46.2236 15.3607C48.884 17.8216 51.1619 20.8848 53.0538 24.5771 51.5595 25.9518 51.8872 26.6456 54.0511 26.6456 55.0044 27.7716 56.3424 28.1779 58.0642 27.877 59.5023 27.0519 60.2281 25.7951 60.2281 24.1061 59.0602 21.8153 57.2823 19.5887 54.8909 17.4421 56.8968 17.7435 58.4765 17.2059 59.644 15.8317 60.0286 14.9017 60.1128 13.9065 59.9 12.8332 59.3456 11.9166 58.3345 11.2228 56.8968 10.7652 50.7211 9.02349 44.6861 7.22915 38.7937 5.39725 36.2895 4.62486 34.3536 4.85973 32.9595 6.08978 32.2898 7.30902 31.9621 8.40782 31.9621 9.37709 32.1184 10.3062 32.8161 11.0013 34.0401 11.4577 35.7632 11.9166 37.8831 12.5323 40.3881 13.2909ZM36.8011 20.2044C36.2895 21.121 36.2895 21.9595 36.8011 22.7306 37.7411 23.3475 38.9353 23.5029 40.3881 23.1895 41.9963 22.4296 42.9363 21.6572 43.2203 20.8848 43.3339 19.6673 43.3339 18.594 43.2203 17.6649 44.5445 17.2059 44.5013 16.4474 43.0498 15.3607 43.0498 15.3607 42.3806 15.1379 41.0418 14.6789 40.7723 14.5222 40.2167 14.9799 39.3774 16.0545ZM86.9126 68.7642C88.5196 69.6807 90.1438 69.7593 91.7516 68.9869 92.9182 68.0716 93.7722 67.0752 94.3412 66.0018 95.1101 64.7183 95.2531 63.5409 94.7553 62.4676 91.923 61.2362 89.2479 60.1629 86.7412 59.2463 84.9633 58.4744 83.2117 57.6359 81.4912 56.7193 79.4974 55.7902 78.0165 55.1883 77.0779 54.8736 75.2421 54.1012 74.7158 54.7169 75.4843 56.7193 77.2065 59.0115 79.0704 61.3148 81.0775 63.619ZM86.9126 46.2844C88.4215 47.2541 90.0872 47.3323 91.923 46.5072 92.4774 45.7474 92.8042 44.8968 92.9182 43.9802 93.3024 42.9069 92.9182 41.755 91.7516 40.5241 88.8049 38.6905 86.002 37.0801 83.3269 35.6933 82.1016 34.7754 81.0197 33.7021 80.0811 32.4725 77.6909 31.8568 75.9678 31.0978 74.9006 30.1678 73.4063 28.9503 73.2642 30.246 74.4882 34.0829 76.4941 37.1586 78.9136 39.8424 81.7467 42.1345ZM86.7412 28.0993C87.6958 29.0163 88.9478 29.7883 90.5 30.4027 90.9403 30.4027 91.4092 30.3258 91.923 30.1678 92.7481 29.4079 93.4173 28.5574 93.9142 27.6417 94.5839 25.2848 94.4405 23.1895 93.5032 21.3563 88.0507 14.6003 81.5753 8.13366 74.0759 1.94113 73.0087 1.48218 71.6845 1.32546 70.0629 1.48218 67.5708 0.866514 66.9871 1.40361 68.3113 3.0926 73.0928 9.74321 78.1024 16.6701 83.3269 23.8833ZM157.418 54.1798C156.194 58.7874 154.657 63.6449 152.82 68.7642 152.551 70.1397 152.992 71.1336 154.159 71.7493 155.667 72.0648 157.275 71.9854 158.997 71.5278 160.222 70.9108 161.077 69.8375 161.588 68.2931 161.745 66.9189 161.745 65.5174 161.588 64.078 161.858 61.4724 162.669 58.7105 163.994 55.7902 166.384 57.0202 168.804 58.173 171.252 59.2463 172.973 59.5477 174.511 59.5477 175.835 59.2463 176.404 58.7874 176.788 58.173 177.017 57.401 177.017 55.2531 176.348 53.8003 175.009 53.0279 172.119 51.6523 168.975 50.4223 165.587 49.349 165.587 45.1589 167.196 39.4508 170.427 32.2497 171.75 35.7719 172.888 40.0652 173.842 45.133 174.624 46.2577 175.622 46.9001 176.844 47.0435 177.613 46.9001 178.482 46.6385 179.421 46.2844 180.545 45.6692 181.158 44.4392 181.258 42.606 179.535 35.5491 177.343 29.0677 174.668 23.1895 177.343 19.8115 179.877 16.3688 182.268 12.8332 183.592 10.8433 184.601 11.0661 185.271 13.527 185.655 15.216 186.039 16.8269 186.438 18.3578 187.548 20.349 188.217 19.9682 188.429 17.2059 188.602 15.5169 188.686 13.9065 188.686 12.3756 188.956 11.3022 189.569 10.2276 190.522 9.15431 190.522 7.41264 190.522 5.54016 190.522 3.55025 189.128 3.24932 187.762 2.47693 186.438 1.24602 185.271 1.10268 183.734 1.56033 181.841 2.63365 178.126 5.54016 174.055 9.7173 169.673 15.1379 166.84 15.2955 163.894 14.2213 160.834 11.9166 159.782 11.3022 158.628 10.4504 157.418 9.37709 155.797 9.37709 155.469 10.2276 156.408 11.9166 158.527 14.3642 161.716 17.4421 166 21.121 162.94 28.8449 160.279 37.0032 158.001 45.5906 154.272 45.4339 150.459 44.3597 146.573 42.3707 145.905 40.9951 145.578 39.7638 145.578 38.6905 146.232 37.7618 147.57 37.539 149.576 37.9967 151.184 38.4556 152.665 39.3061 153.988 40.5241 154.941 41.2961 155.938 41.5974 156.991 41.4528 157.945 40.8384 158.556 39.7638 158.827 38.2328 159.496 36.8452 158.685 35.4709 156.408 34.0829 156.905 29.5793 157.248 25.1134 157.418 20.6634 156.579 16.3688 154.829 13.6056 152.152 12.3756 150.714 12.6765 149.462 12.5323 148.41 11.9166 147.185 10.6853 145.621 9.99276 143.742 9.84812 142.673 10.7652 141.677 11.4577 140.739 11.9166 140.624 13.4489 140.424 14.9799 140.155 16.5121 139.871 18.0565 140.34 18.594 141.565 18.1225 143.186 17.5207 144.567 17.4421 145.733 17.9002 147.911 18.2011 149.377 19.5106 150.16 21.8153 150.16 24.8785 150.16 27.9024 150.16 30.8616 148.822 29.7883 147.427 28.9503 145.99 28.3346 143.812 28.1779 142.147 26.9211 140.98 24.5771 139.371 21.0416 138.291 17.1278 137.734 12.8332 136.682 11.9166 135.616 10.9214 134.562 9.84812 133.338 8.72256 132.54 9.40299 132.141 11.9166 133.096 17.5854 134.476 22.914 136.312 27.877 136.981 35.2343 137.678 42.4747 138.403 49.5843 138.503 50.9585 138.76 52.4247 139.145 53.957 140.211 54.8736 141.209 55.4098 142.147 55.5674 142.817 55.5674 143.627 55.3312 144.567 54.8736 145.349 54.5727 146.018 53.3426 146.573 51.1947 149.135 51.8104 151.74 52.4247 154.415 53.0279ZM179.678 62.2448C177.786 61.3148 176.447 61.3148 175.678 62.2448 174.568 64.078 173.558 65.871 172.676 67.6127 172.233 68.9869 172.233 70.375 172.676 71.7493 173.059 72.3662 173.928 72.7444 175.251 72.902 176.589 72.6011 177.786 72.0648 178.838 71.2916 180.46 69.7593 181.655 68.0716 182.424 66.2246 182.879 64.7977 182.767 63.619 182.097 62.7037ZM120.129 37.7618C117.469 38.2328 115.989 39.7638 115.718 42.3707 115.547 44.0584 115.689 45.7741 116.131 47.5158 116.53 49.0481 117.582 50.1214 119.304 50.7357L123.717 52.11C123.83 57.6359 124.228 63.1087 124.884 68.5293 125.439 69.6026 126.05 70.5192 126.72 71.2916 127.787 71.9073 128.926 71.9073 130.149 71.2916 131.359 70.375 132.17 68.7642 132.555 66.4608 133.066 62.7296 132.982 58.6306 132.312 54.1798 133.536 53.7208 134.419 52.5689 134.973 50.7357 135.202 49.6624 135.402 48.7337 135.557 47.9734 135.402 46.6912 134.732 45.3679 133.566 43.9802 132.726 43.2078 131.786 42.4492 130.733 41.6756 130.335 38.1547 130.007 34.6191 129.723 31.0978 130.563 31.3991 131.415 31.7122 132.312 32.0135 132.982 32.1711 133.721 32.0135 134.562 31.5559 135.23 30.1678 135.288 29.0163 134.732 28.0993 131.388 22.3778 127.203 17.2059 122.136 12.6104 120.799 11.9948 119.603 12.2175 118.55 13.2909 117.056 16.6701 116.771 19.4324 117.711 21.5787 120.003 23.4257 121.524 24.7999 122.308 25.7303 122.194 29.1459 122.136 32.7086 122.136 36.3862ZM229.247 55.7902C229.135 56.1036 228.749 56.6407 228.081 57.401 225.405 60.6344 223.597 63.4882 222.658 66.0018 222.928 68.2931 224.266 69.9169 226.657 70.8339 229.048 70.6759 231.268 69.145 233.332 66.2246 234.499 63.5664 234.087 61.3943 232.081 59.704 233.019 57.7141 232.891 55.9469 231.667 54.4159 233.831 54.8736 235.78 55.4098 237.501 56.0264 237.886 60.7786 238.357 65.6362 238.926 70.5978 239.694 73.6744 241.558 74.8919 244.505 74.2763 247.451 73.2029 248.987 70.9902 249.087 67.6127 248.987 65.7143 248.873 63.7771 248.76 61.7725 252.488 65.2027 256.147 68.5293 259.762 71.7493 262.052 73.1382 264.244 73.2815 266.35 72.2082 268.628 70.375 268.628 68.2012 266.35 65.6888 260.345 63.5409 254.538 61.3148 248.93 59.0115 248.816 58.2516 248.476 57.4792 247.92 56.7193 256.103 57.1783 264.244 56.7988 272.357 55.5674 276.256 55.8688 278.59 54.7955 279.359 52.3462 281.251 50.6576 281.722 48.89 280.782 47.0435 280.113 45.0022 277.865 44.2164 274.022 44.674 271.973 46.1022 269.753 46.6385 267.362 46.2844 262.123 44.7535 260.929 45.0022 263.774 47.0435 266.55 48.5891 269.211 50.1214 271.774 51.6523 266.72 52.7257 261.297 53.0279 255.521 52.5689 251.792 51.9537 248.533 51.2728 245.757 50.5009 240.647 48.1962 238.028 47.8953 237.914 49.5843 235.752 49.4263 233.603 49.1914 231.496 48.89 229.49 47.9734 227.027 47.5158 224.08 47.5158 221.235 46.6912 218.815 45.7474 216.823 44.674 216.325 42.985 216.267 41.0612 216.653 38.9132 217.321 37.6957 217.036 36.6224 215.812 35.6933 214.93 33.2444 213.351 32.0135 211.06 32.0135 209.736 33.3878 209.18 35.1562 209.394 37.3028 209.564 41.755 210.461 46.5331 212.069 51.6523 212.453 53.4981 213.849 54.1798 216.24 53.7208 217.463 53.2632 218.261 52.6475 218.659 51.8872 221.99 52.8051 225.605 53.5641 229.49 54.1798ZM251.094 47.9734C255.15 48.7337 257.568 47.6332 258.352 44.674 259.12 43.7453 258.466 41.755 256.346 38.6905 255.676 37.1586 255.491 36.0853 255.762 35.4709 254.936 32.8515 253.314 31.3991 250.923 31.0978 249.699 30.7835 248.846 30.0897 248.347 29.0163 247.792 27.9024 247.251 26.7238 246.753 25.4942 248.091 25.9518 249.429 26.3322 250.766 26.6456 254.879 26.9466 256.929 25.7303 256.929 22.9667 257.099 20.6634 255.564 18.7382 252.346 17.2059 250.454 16.7483 248.646 16.2112 246.924 15.5955 246.924 14.0646 246.981 12.3756 247.095 10.5286 253.812 10.8433 260.657 10.8433 267.603 10.5286 269.994 10.2276 271.048 8.05551 270.777 4.00919 270.38 1.56033 268.328 0.408863 264.601 0.565587 263.375 0.866514 261.767 1.10268 259.762 1.24602 251.207 1.71705 242.981 1.48218 235.083 0.565587 229.631-0.507733 225.69-0.0500825 223.242 1.94113 222.574 2.85643 222.046 4.16592 221.662 5.8549 222.602 7.73948 224.936 8.99629 228.663 9.61196 232.165 10.0709 235.637 10.3062 239.082 10.3062 239.082 12.2961 239.082 13.9065 239.082 15.1379 234.301 14.9799 231.169 15.975 229.661 18.1225 229.276 20.7406 230.415 22.2729 233.077 22.7306 234.97 22.5738 237.161 22.8886 239.665 23.6484 239.665 24.1061 239.665 24.4208 239.665 24.5771 237.829 23.9619 237.588 24.499 238.926 26.1867 238.754 26.8036 238.612 27.4314 238.498 28.0993 236.605 24.9834 234.883 24.8258 233.332 27.6417 230.885 30.246 229.419 34.0047 228.906 38.9132 229.021 41.0612 229.887 42.985 231.496 44.674 232.948 46.2577 234.329 46.2577 235.666 44.674 238.327 46.1022 241.558 47.1229 245.344 47.7386ZM247.508 40.9951C244.845 40.2227 242.228 39.3722 239.665 38.4556 238.996 37.8399 238.812 36.9233 239.082 35.6933 239.637 35.078 240.064 34.3963 240.334 33.6239 241.388 34.0829 242.526 34.5405 243.75 34.9982 245.087 35.6138 246.199 36.9233 247.095 38.9132Z" fill="#E60013" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/></g></g></g></g></svg>
+<svg id="b-ja" viewBox="0 0 2475 2475" width="2475" height="2475" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" overflow="hidden"><g transform="translate(-1094 0)"><g><g><g><path d="M318.375 78.75C318.375 117.272 251.386 148.5 168.75 148.5 86.1144 148.5 19.125 117.272 19.125 78.75 19.125 40.2281 86.1144 9 168.75 9 251.386 9 318.375 40.2281 318.375 78.75Z" fill="#E60013" transform="matrix(1.00082 0 0 1 3104.11 104.25)"/><text fill="#FFFFFF" font-family="Times New Roman,Times New Roman_MSFontService,sans-serif" font-weight="700" font-size="82" transform="matrix(1.12593 0 0 1.125 3174.65 207)">OTC</text></g></g></g><path d="M2850.98 68.2083 2850.97 68.2087 1812.02 68.2087 1551.98 68.2087 1506.09 68.2087 1506.09 335.295C1506.09 372.332 1476.07 402.356 1439.03 402.356L1162.21 402.356 1162.21 457.98 1162.21 699.688 1162.21 2017.02C1162.21 2030.47 1162.89 2043.77 1164.22 2056.87L1167.33 2077.26 1167.33 2280.49C1167.33 2350.25 1223.88 2406.79 1293.63 2406.79L1817.15 2406.79 1817.15 2406.79 2850.97 2406.79 2850.98 2406.79 3374.49 2406.79C3444.25 2406.79 3500.79 2350.25 3500.79 2280.49L3500.79 2017.02 3500.79 1775.31 3500.79 699.687 3500.79 457.98 3500.79 194.507C3500.79 124.754 3444.25 68.2083 3374.49 68.2083ZM1094 0 1161.06 0 1439.03 0 3569 0 3569 2475 1094 2475 1094 335.295 1094 67.0607Z" fill="#DBE4ED" fill-rule="evenodd"/><g><g><g><path d="M149.881 267.145C172.463 291.157 199.614 295.748 229.896 287.056 315.5 231.234 195.036 115.824 149.881 85.7279 104.726 115.824-15.7389 231.234 69.8655 287.056 100.147 295.748 127.299 291.157 149.881 267.145ZM149.881 242.262C165.325 258.684 183.894 261.822 204.601 255.878 263.148 217.703 180.761 138.772 149.881 118.193 119.001 138.772 36.6138 217.703 95.1602 255.878 115.868 261.822 134.436 258.684 149.881 242.262" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M152.669 79.6321C180.769 97.5517 206.101 117.998 231.553 139.696 237.817 145.028 243.515 149.732 251.299 152.864 267.694 159.472 283.572 156.119 298.999 146.277 252.685 105.096 203.617 85.1122 152.669 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M146.332 79.6321C118.231 97.5517 92.8996 117.998 67.446 139.696 61.1836 145.028 55.4854 149.732 47.7019 152.864 31.3059 159.472 15.4289 156.119 0 146.277 46.3151 105.096 95.383 85.1122 146.332 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M140.269 226.921 140.269 149.933 159.493 149.933 159.493 226.921Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M188.375 198.039 111.387 198.039 111.387 178.815 188.375 178.815Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M46.6346 71.9854C47.1915 72.4431 48.0581 72.7444 49.2268 72.902 50.9473 73.0587 52.6989 72.9806 54.4781 72.6658 56.2004 72.2082 57.3384 71.0567 57.8941 69.2231 58.1203 68.6074 58.0348 67.9136 57.6372 67.1537 59.359 66.5394 60.5545 64.9031 61.2241 62.2448 61.3943 59.6258 60.8105 57.5573 59.473 56.0264 56.9261 54.1798 54.7769 52.9618 53.0538 52.3462 52.7844 51.1152 53.2533 50.5009 54.4781 50.5009 56.4693 51.2728 58.391 52.3462 60.2281 53.7208 61.0674 54.3365 62.2055 54.6387 63.6437 54.6387 65.2653 54.1798 66.5333 53.2632 67.4853 51.8872 67.8696 50.6576 67.9261 49.5843 67.6567 48.6539 67.4292 47.7386 66.2907 47.2015 64.2274 47.0435 61.7358 47.6591 59.1462 47.7386 56.4693 47.2796 53.5235 45.8527 51.3894 44.1369 50.0519 42.1345 51.3894 42.4492 52.9117 42.8283 54.6335 43.2864 55.4733 43.444 56.2845 43.8235 57.0535 44.4392 59.3456 46.1808 60.9539 45.6433 61.8925 42.8283 62.5617 41.1398 61.7504 38.9918 59.473 36.3862 58.5339 34.6973 58.0642 33.0096 58.0642 31.3193 57.3946 29.945 56.057 29.0945 54.0511 28.7936 51.8872 28.4788 49.4677 27.38 46.806 25.4942 44.9702 23.6484 43.3058 23.0328 41.7969 23.6484 40.3587 24.8785 39.2915 26.3581 38.6236 28.0993 37.128 30.4027 36.3176 32.7868 36.2174 35.2343 36.489 37.381 37.7691 38.769 40.0466 39.3722 42.1678 40.1446 44.2164 40.917 46.2236 41.6756 47.7178 42.1345 49.0554 43.2864 50.222 45.133 42.8775 42.8283 35.7339 40.3013 28.7884 37.539 26.8952 36.4657 25.3728 36.2295 24.2063 36.8452 23.5371 38.5342 23.1247 39.8424 22.952 40.7603 23.2236 42.2912 24.4476 43.2864 26.6249 43.7453 31.6768 45.133 36.489 46.7693 41.0418 48.6539 42.8775 49.7272 43.1344 50.6576 41.7969 51.4175 38.6236 52.0331 36.5745 53.1846 35.6337 54.8736 35.2356 57.1783 35.2922 59.2463 35.79 61.0933 37.0153 62.1666 38.4388 62.781 40.0466 62.9252 42.1678 63.24 43.8321 63.6976 45.0548 64.3133 45.5539 66.9711 46.0802 69.5245 46.6346 71.9854ZM44.6287 34.9982C44.5285 33.4672 45.1269 32.2497 46.4658 31.3193 49.5243 33.0096 51.3894 34.9982 52.0586 37.3028ZM46.2236 15.3607C48.884 17.8216 51.1619 20.8848 53.0538 24.5771 51.5595 25.9518 51.8872 26.6456 54.0511 26.6456 55.0044 27.7716 56.3424 28.1779 58.0642 27.877 59.5023 27.0519 60.2281 25.7951 60.2281 24.1061 59.0602 21.8153 57.2823 19.5887 54.8909 17.4421 56.8968 17.7435 58.4765 17.2059 59.644 15.8317 60.0286 14.9017 60.1128 13.9065 59.9 12.8332 59.3456 11.9166 58.3345 11.2228 56.8968 10.7652 50.7211 9.02349 44.6861 7.22915 38.7937 5.39725 36.2895 4.62486 34.3536 4.85973 32.9595 6.08978 32.2898 7.30902 31.9621 8.40782 31.9621 9.37709 32.1184 10.3062 32.8161 11.0013 34.0401 11.4577 35.7632 11.9166 37.8831 12.5323 40.3881 13.2909ZM36.8011 20.2044C36.2895 21.121 36.2895 21.9595 36.8011 22.7306 37.7411 23.3475 38.9353 23.5029 40.3881 23.1895 41.9963 22.4296 42.9363 21.6572 43.2203 20.8848 43.3339 19.6673 43.3339 18.594 43.2203 17.6649 44.5445 17.2059 44.5013 16.4474 43.0498 15.3607 43.0498 15.3607 42.3806 15.1379 41.0418 14.6789 40.7723 14.5222 40.2167 14.9799 39.3774 16.0545ZM86.9126 68.7642C88.5196 69.6807 90.1438 69.7593 91.7516 68.9869 92.9182 68.0716 93.7722 67.0752 94.3412 66.0018 95.1101 64.7183 95.2531 63.5409 94.7553 62.4676 91.923 61.2362 89.2479 60.1629 86.7412 59.2463 84.9633 58.4744 83.2117 57.6359 81.4912 56.7193 79.4974 55.7902 78.0165 55.1883 77.0779 54.8736 75.2421 54.1012 74.7158 54.7169 75.4843 56.7193 77.2065 59.0115 79.0704 61.3148 81.0775 63.619ZM86.9126 46.2844C88.4215 47.2541 90.0872 47.3323 91.923 46.5072 92.4774 45.7474 92.8042 44.8968 92.9182 43.9802 93.3024 42.9069 92.9182 41.755 91.7516 40.5241 88.8049 38.6905 86.002 37.0801 83.3269 35.6933 82.1016 34.7754 81.0197 33.7021 80.0811 32.4725 77.6909 31.8568 75.9678 31.0978 74.9006 30.1678 73.4063 28.9503 73.2642 30.246 74.4882 34.0829 76.4941 37.1586 78.9136 39.8424 81.7467 42.1345ZM86.7412 28.0993C87.6958 29.0163 88.9478 29.7883 90.5 30.4027 90.9403 30.4027 91.4092 30.3258 91.923 30.1678 92.7481 29.4079 93.4173 28.5574 93.9142 27.6417 94.5839 25.2848 94.4405 23.1895 93.5032 21.3563 88.0507 14.6003 81.5753 8.13366 74.0759 1.94113 73.0087 1.48218 71.6845 1.32546 70.0629 1.48218 67.5708 0.866514 66.9871 1.40361 68.3113 3.0926 73.0928 9.74321 78.1024 16.6701 83.3269 23.8833ZM157.418 54.1798C156.194 58.7874 154.657 63.6449 152.82 68.7642 152.551 70.1397 152.992 71.1336 154.159 71.7493 155.667 72.0648 157.275 71.9854 158.997 71.5278 160.222 70.9108 161.077 69.8375 161.588 68.2931 161.745 66.9189 161.745 65.5174 161.588 64.078 161.858 61.4724 162.669 58.7105 163.994 55.7902 166.384 57.0202 168.804 58.173 171.252 59.2463 172.973 59.5477 174.511 59.5477 175.835 59.2463 176.404 58.7874 176.788 58.173 177.017 57.401 177.017 55.2531 176.348 53.8003 175.009 53.0279 172.119 51.6523 168.975 50.4223 165.587 49.349 165.587 45.1589 167.196 39.4508 170.427 32.2497 171.75 35.7719 172.888 40.0652 173.842 45.133 174.624 46.2577 175.622 46.9001 176.844 47.0435 177.613 46.9001 178.482 46.6385 179.421 46.2844 180.545 45.6692 181.158 44.4392 181.258 42.606 179.535 35.5491 177.343 29.0677 174.668 23.1895 177.343 19.8115 179.877 16.3688 182.268 12.8332 183.592 10.8433 184.601 11.0661 185.271 13.527 185.655 15.216 186.039 16.8269 186.438 18.3578 187.548 20.349 188.217 19.9682 188.429 17.2059 188.602 15.5169 188.686 13.9065 188.686 12.3756 188.956 11.3022 189.569 10.2276 190.522 9.15431 190.522 7.41264 190.522 5.54016 190.522 3.55025 189.128 3.24932 187.762 2.47693 186.438 1.24602 185.271 1.10268 183.734 1.56033 181.841 2.63365 178.126 5.54016 174.055 9.7173 169.673 15.1379 166.84 15.2955 163.894 14.2213 160.834 11.9166 159.782 11.3022 158.628 10.4504 157.418 9.37709 155.797 9.37709 155.469 10.2276 156.408 11.9166 158.527 14.3642 161.716 17.4421 166 21.121 162.94 28.8449 160.279 37.0032 158.001 45.5906 154.272 45.4339 150.459 44.3597 146.573 42.3707 145.905 40.9951 145.578 39.7638 145.578 38.6905 146.232 37.7618 147.57 37.539 149.576 37.9967 151.184 38.4556 152.665 39.3061 153.988 40.5241 154.941 41.2961 155.938 41.5974 156.991 41.4528 157.945 40.8384 158.556 39.7638 158.827 38.2328 159.496 36.8452 158.685 35.4709 156.408 34.0829 156.905 29.5793 157.248 25.1134 157.418 20.6634 156.579 16.3688 154.829 13.6056 152.152 12.3756 150.714 12.6765 149.462 12.5323 148.41 11.9166 147.185 10.6853 145.621 9.99276 143.742 9.84812 142.673 10.7652 141.677 11.4577 140.739 11.9166 140.624 13.4489 140.424 14.9799 140.155 16.5121 139.871 18.0565 140.34 18.594 141.565 18.1225 143.186 17.5207 144.567 17.4421 145.733 17.9002 147.911 18.2011 149.377 19.5106 150.16 21.8153 150.16 24.8785 150.16 27.9024 150.16 30.8616 148.822 29.7883 147.427 28.9503 145.99 28.3346 143.812 28.1779 142.147 26.9211 140.98 24.5771 139.371 21.0416 138.291 17.1278 137.734 12.8332 136.682 11.9166 135.616 10.9214 134.562 9.84812 133.338 8.72256 132.54 9.40299 132.141 11.9166 133.096 17.5854 134.476 22.914 136.312 27.877 136.981 35.2343 137.678 42.4747 138.403 49.5843 138.503 50.9585 138.76 52.4247 139.145 53.957 140.211 54.8736 141.209 55.4098 142.147 55.5674 142.817 55.5674 143.627 55.3312 144.567 54.8736 145.349 54.5727 146.018 53.3426 146.573 51.1947 149.135 51.8104 151.74 52.4247 154.415 53.0279ZM179.678 62.2448C177.786 61.3148 176.447 61.3148 175.678 62.2448 174.568 64.078 173.558 65.871 172.676 67.6127 172.233 68.9869 172.233 70.375 172.676 71.7493 173.059 72.3662 173.928 72.7444 175.251 72.902 176.589 72.6011 177.786 72.0648 178.838 71.2916 180.46 69.7593 181.655 68.0716 182.424 66.2246 182.879 64.7977 182.767 63.619 182.097 62.7037ZM120.129 37.7618C117.469 38.2328 115.989 39.7638 115.718 42.3707 115.547 44.0584 115.689 45.7741 116.131 47.5158 116.53 49.0481 117.582 50.1214 119.304 50.7357L123.717 52.11C123.83 57.6359 124.228 63.1087 124.884 68.5293 125.439 69.6026 126.05 70.5192 126.72 71.2916 127.787 71.9073 128.926 71.9073 130.149 71.2916 131.359 70.375 132.17 68.7642 132.555 66.4608 133.066 62.7296 132.982 58.6306 132.312 54.1798 133.536 53.7208 134.419 52.5689 134.973 50.7357 135.202 49.6624 135.402 48.7337 135.557 47.9734 135.402 46.6912 134.732 45.3679 133.566 43.9802 132.726 43.2078 131.786 42.4492 130.733 41.6756 130.335 38.1547 130.007 34.6191 129.723 31.0978 130.563 31.3991 131.415 31.7122 132.312 32.0135 132.982 32.1711 133.721 32.0135 134.562 31.5559 135.23 30.1678 135.288 29.0163 134.732 28.0993 131.388 22.3778 127.203 17.2059 122.136 12.6104 120.799 11.9948 119.603 12.2175 118.55 13.2909 117.056 16.6701 116.771 19.4324 117.711 21.5787 120.003 23.4257 121.524 24.7999 122.308 25.7303 122.194 29.1459 122.136 32.7086 122.136 36.3862ZM229.247 55.7902C229.135 56.1036 228.749 56.6407 228.081 57.401 225.405 60.6344 223.597 63.4882 222.658 66.0018 222.928 68.2931 224.266 69.9169 226.657 70.8339 229.048 70.6759 231.268 69.145 233.332 66.2246 234.499 63.5664 234.087 61.3943 232.081 59.704 233.019 57.7141 232.891 55.9469 231.667 54.4159 233.831 54.8736 235.78 55.4098 237.501 56.0264 237.886 60.7786 238.357 65.6362 238.926 70.5978 239.694 73.6744 241.558 74.8919 244.505 74.2763 247.451 73.2029 248.987 70.9902 249.087 67.6127 248.987 65.7143 248.873 63.7771 248.76 61.7725 252.488 65.2027 256.147 68.5293 259.762 71.7493 262.052 73.1382 264.244 73.2815 266.35 72.2082 268.628 70.375 268.628 68.2012 266.35 65.6888 260.345 63.5409 254.538 61.3148 248.93 59.0115 248.816 58.2516 248.476 57.4792 247.92 56.7193 256.103 57.1783 264.244 56.7988 272.357 55.5674 276.256 55.8688 278.59 54.7955 279.359 52.3462 281.251 50.6576 281.722 48.89 280.782 47.0435 280.113 45.0022 277.865 44.2164 274.022 44.674 271.973 46.1022 269.753 46.6385 267.362 46.2844 262.123 44.7535 260.929 45.0022 263.774 47.0435 266.55 48.5891 269.211 50.1214 271.774 51.6523 266.72 52.7257 261.297 53.0279 255.521 52.5689 251.792 51.9537 248.533 51.2728 245.757 50.5009 240.647 48.1962 238.028 47.8953 237.914 49.5843 235.752 49.4263 233.603 49.1914 231.496 48.89 229.49 47.9734 227.027 47.5158 224.08 47.5158 221.235 46.6912 218.815 45.7474 216.823 44.674 216.325 42.985 216.267 41.0612 216.653 38.9132 217.321 37.6957 217.036 36.6224 215.812 35.6933 214.93 33.2444 213.351 32.0135 211.06 32.0135 209.736 33.3878 209.18 35.1562 209.394 37.3028 209.564 41.755 210.461 46.5331 212.069 51.6523 212.453 53.4981 213.849 54.1798 216.24 53.7208 217.463 53.2632 218.261 52.6475 218.659 51.8872 221.99 52.8051 225.605 53.5641 229.49 54.1798ZM251.094 47.9734C255.15 48.7337 257.568 47.6332 258.352 44.674 259.12 43.7453 258.466 41.755 256.346 38.6905 255.676 37.1586 255.491 36.0853 255.762 35.4709 254.936 32.8515 253.314 31.3991 250.923 31.0978 249.699 30.7835 248.846 30.0897 248.347 29.0163 247.792 27.9024 247.251 26.7238 246.753 25.4942 248.091 25.9518 249.429 26.3322 250.766 26.6456 254.879 26.9466 256.929 25.7303 256.929 22.9667 257.099 20.6634 255.564 18.7382 252.346 17.2059 250.454 16.7483 248.646 16.2112 246.924 15.5955 246.924 14.0646 246.981 12.3756 247.095 10.5286 253.812 10.8433 260.657 10.8433 267.603 10.5286 269.994 10.2276 271.048 8.05551 270.777 4.00919 270.38 1.56033 268.328 0.408863 264.601 0.565587 263.375 0.866514 261.767 1.10268 259.762 1.24602 251.207 1.71705 242.981 1.48218 235.083 0.565587 229.631-0.507733 225.69-0.0500825 223.242 1.94113 222.574 2.85643 222.046 4.16592 221.662 5.8549 222.602 7.73948 224.936 8.99629 228.663 9.61196 232.165 10.0709 235.637 10.3062 239.082 10.3062 239.082 12.2961 239.082 13.9065 239.082 15.1379 234.301 14.9799 231.169 15.975 229.661 18.1225 229.276 20.7406 230.415 22.2729 233.077 22.7306 234.97 22.5738 237.161 22.8886 239.665 23.6484 239.665 24.1061 239.665 24.4208 239.665 24.5771 237.829 23.9619 237.588 24.499 238.926 26.1867 238.754 26.8036 238.612 27.4314 238.498 28.0993 236.605 24.9834 234.883 24.8258 233.332 27.6417 230.885 30.246 229.419 34.0047 228.906 38.9132 229.021 41.0612 229.887 42.985 231.496 44.674 232.948 46.2577 234.329 46.2577 235.666 44.674 238.327 46.1022 241.558 47.1229 245.344 47.7386ZM247.508 40.9951C244.845 40.2227 242.228 39.3722 239.665 38.4556 238.996 37.8399 238.812 36.9233 239.082 35.6933 239.637 35.078 240.064 34.3963 240.334 33.6239 241.388 34.0829 242.526 34.5405 243.75 34.9982 245.087 35.6138 246.199 36.9233 247.095 38.9132Z" fill="#E60013" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/></g></g></g></g></svg>
+<svg id="b-yi" viewBox="0 0 2475 2475" width="2475" height="2475" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" overflow="hidden"><g transform="translate(-1094 0)"><g><g><g><path d="M318.375 78.75C318.375 117.272 251.386 148.5 168.75 148.5 86.1144 148.5 19.125 117.272 19.125 78.75 19.125 40.2281 86.1144 9 168.75 9 251.386 9 318.375 40.2281 318.375 78.75Z" fill="#009944" transform="matrix(1.00082 0 0 1 3104.11 104.25)"/><text fill="#FFFFFF" font-family="Times New Roman,Times New Roman_MSFontService,sans-serif" font-weight="700" font-size="82" transform="matrix(1.12593 0 0 1.125 3174.65 207)">OTC</text></g></g></g><path d="M2850.98 68.2083 2850.97 68.2087 1812.02 68.2087 1551.98 68.2087 1506.09 68.2087 1506.09 335.295C1506.09 372.332 1476.07 402.356 1439.03 402.356L1162.21 402.356 1162.21 457.98 1162.21 699.688 1162.21 2017.02C1162.21 2030.47 1162.89 2043.77 1164.22 2056.87L1167.33 2077.26 1167.33 2280.49C1167.33 2350.25 1223.88 2406.79 1293.63 2406.79L1817.15 2406.79 1817.15 2406.79 2850.97 2406.79 2850.98 2406.79 3374.49 2406.79C3444.25 2406.79 3500.79 2350.25 3500.79 2280.49L3500.79 2017.02 3500.79 1775.31 3500.79 699.687 3500.79 457.98 3500.79 194.507C3500.79 124.754 3444.25 68.2083 3374.49 68.2083ZM1094 0 1161.06 0 1439.03 0 3569 0 3569 2475 1094 2475 1094 335.295 1094 67.0607Z" fill="#DBE4ED" fill-rule="evenodd"/><g><g><g><path d="M149.881 267.145C172.463 291.157 199.614 295.748 229.896 287.056 315.5 231.234 195.036 115.824 149.881 85.7279 104.726 115.824-15.7389 231.234 69.8655 287.056 100.147 295.748 127.299 291.157 149.881 267.145ZM149.881 242.262C165.325 258.684 183.894 261.822 204.601 255.878 263.148 217.703 180.761 138.772 149.881 118.193 119.001 138.772 36.6138 217.703 95.1602 255.878 115.868 261.822 134.436 258.684 149.881 242.262" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M152.669 79.6321C180.769 97.5517 206.101 117.998 231.553 139.696 237.817 145.028 243.515 149.732 251.299 152.864 267.694 159.472 283.572 156.119 298.999 146.277 252.685 105.096 203.617 85.1122 152.669 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M146.332 79.6321C118.231 97.5517 92.8996 117.998 67.446 139.696 61.1836 145.028 55.4854 149.732 47.7019 152.864 31.3059 159.472 15.4289 156.119 0 146.277 46.3151 105.096 95.383 85.1122 146.332 79.6321" fill="#009944" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M140.269 226.921 140.269 149.933 159.493 149.933 159.493 226.921Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M188.375 198.039 111.387 198.039 111.387 178.815 188.375 178.815Z" fill="#E60013" fill-rule="evenodd" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/><path d="M46.6346 71.9854C47.1915 72.4431 48.0581 72.7444 49.2268 72.902 50.9473 73.0587 52.6989 72.9806 54.4781 72.6658 56.2004 72.2082 57.3384 71.0567 57.8941 69.2231 58.1203 68.6074 58.0348 67.9136 57.6372 67.1537 59.359 66.5394 60.5545 64.9031 61.2241 62.2448 61.3943 59.6258 60.8105 57.5573 59.473 56.0264 56.9261 54.1798 54.7769 52.9618 53.0538 52.3462 52.7844 51.1152 53.2533 50.5009 54.4781 50.5009 56.4693 51.2728 58.391 52.3462 60.2281 53.7208 61.0674 54.3365 62.2055 54.6387 63.6437 54.6387 65.2653 54.1798 66.5333 53.2632 67.4853 51.8872 67.8696 50.6576 67.9261 49.5843 67.6567 48.6539 67.4292 47.7386 66.2907 47.2015 64.2274 47.0435 61.7358 47.6591 59.1462 47.7386 56.4693 47.2796 53.5235 45.8527 51.3894 44.1369 50.0519 42.1345 51.3894 42.4492 52.9117 42.8283 54.6335 43.2864 55.4733 43.444 56.2845 43.8235 57.0535 44.4392 59.3456 46.1808 60.9539 45.6433 61.8925 42.8283 62.5617 41.1398 61.7504 38.9918 59.473 36.3862 58.5339 34.6973 58.0642 33.0096 58.0642 31.3193 57.3946 29.945 56.057 29.0945 54.0511 28.7936 51.8872 28.4788 49.4677 27.38 46.806 25.4942 44.9702 23.6484 43.3058 23.0328 41.7969 23.6484 40.3587 24.8785 39.2915 26.3581 38.6236 28.0993 37.128 30.4027 36.3176 32.7868 36.2174 35.2343 36.489 37.381 37.7691 38.769 40.0466 39.3722 42.1678 40.1446 44.2164 40.917 46.2236 41.6756 47.7178 42.1345 49.0554 43.2864 50.222 45.133 42.8775 42.8283 35.7339 40.3013 28.7884 37.539 26.8952 36.4657 25.3728 36.2295 24.2063 36.8452 23.5371 38.5342 23.1247 39.8424 22.952 40.7603 23.2236 42.2912 24.4476 43.2864 26.6249 43.7453 31.6768 45.133 36.489 46.7693 41.0418 48.6539 42.8775 49.7272 43.1344 50.6576 41.7969 51.4175 38.6236 52.0331 36.5745 53.1846 35.6337 54.8736 35.2356 57.1783 35.2922 59.2463 35.79 61.0933 37.0153 62.1666 38.4388 62.781 40.0466 62.9252 42.1678 63.24 43.8321 63.6976 45.0548 64.3133 45.5539 66.9711 46.0802 69.5245 46.6346 71.9854ZM44.6287 34.9982C44.5285 33.4672 45.1269 32.2497 46.4658 31.3193 49.5243 33.0096 51.3894 34.9982 52.0586 37.3028ZM46.2236 15.3607C48.884 17.8216 51.1619 20.8848 53.0538 24.5771 51.5595 25.9518 51.8872 26.6456 54.0511 26.6456 55.0044 27.7716 56.3424 28.1779 58.0642 27.877 59.5023 27.0519 60.2281 25.7951 60.2281 24.1061 59.0602 21.8153 57.2823 19.5887 54.8909 17.4421 56.8968 17.7435 58.4765 17.2059 59.644 15.8317 60.0286 14.9017 60.1128 13.9065 59.9 12.8332 59.3456 11.9166 58.3345 11.2228 56.8968 10.7652 50.7211 9.02349 44.6861 7.22915 38.7937 5.39725 36.2895 4.62486 34.3536 4.85973 32.9595 6.08978 32.2898 7.30902 31.9621 8.40782 31.9621 9.37709 32.1184 10.3062 32.8161 11.0013 34.0401 11.4577 35.7632 11.9166 37.8831 12.5323 40.3881 13.2909ZM36.8011 20.2044C36.2895 21.121 36.2895 21.9595 36.8011 22.7306 37.7411 23.3475 38.9353 23.5029 40.3881 23.1895 41.9963 22.4296 42.9363 21.6572 43.2203 20.8848 43.3339 19.6673 43.3339 18.594 43.2203 17.6649 44.5445 17.2059 44.5013 16.4474 43.0498 15.3607 43.0498 15.3607 42.3806 15.1379 41.0418 14.6789 40.7723 14.5222 40.2167 14.9799 39.3774 16.0545ZM86.9126 68.7642C88.5196 69.6807 90.1438 69.7593 91.7516 68.9869 92.9182 68.0716 93.7722 67.0752 94.3412 66.0018 95.1101 64.7183 95.2531 63.5409 94.7553 62.4676 91.923 61.2362 89.2479 60.1629 86.7412 59.2463 84.9633 58.4744 83.2117 57.6359 81.4912 56.7193 79.4974 55.7902 78.0165 55.1883 77.0779 54.8736 75.2421 54.1012 74.7158 54.7169 75.4843 56.7193 77.2065 59.0115 79.0704 61.3148 81.0775 63.619ZM86.9126 46.2844C88.4215 47.2541 90.0872 47.3323 91.923 46.5072 92.4774 45.7474 92.8042 44.8968 92.9182 43.9802 93.3024 42.9069 92.9182 41.755 91.7516 40.5241 88.8049 38.6905 86.002 37.0801 83.3269 35.6933 82.1016 34.7754 81.0197 33.7021 80.0811 32.4725 77.6909 31.8568 75.9678 31.0978 74.9006 30.1678 73.4063 28.9503 73.2642 30.246 74.4882 34.0829 76.4941 37.1586 78.9136 39.8424 81.7467 42.1345ZM86.7412 28.0993C87.6958 29.0163 88.9478 29.7883 90.5 30.4027 90.9403 30.4027 91.4092 30.3258 91.923 30.1678 92.7481 29.4079 93.4173 28.5574 93.9142 27.6417 94.5839 25.2848 94.4405 23.1895 93.5032 21.3563 88.0507 14.6003 81.5753 8.13366 74.0759 1.94113 73.0087 1.48218 71.6845 1.32546 70.0629 1.48218 67.5708 0.866514 66.9871 1.40361 68.3113 3.0926 73.0928 9.74321 78.1024 16.6701 83.3269 23.8833ZM157.418 54.1798C156.194 58.7874 154.657 63.6449 152.82 68.7642 152.551 70.1397 152.992 71.1336 154.159 71.7493 155.667 72.0648 157.275 71.9854 158.997 71.5278 160.222 70.9108 161.077 69.8375 161.588 68.2931 161.745 66.9189 161.745 65.5174 161.588 64.078 161.858 61.4724 162.669 58.7105 163.994 55.7902 166.384 57.0202 168.804 58.173 171.252 59.2463 172.973 59.5477 174.511 59.5477 175.835 59.2463 176.404 58.7874 176.788 58.173 177.017 57.401 177.017 55.2531 176.348 53.8003 175.009 53.0279 172.119 51.6523 168.975 50.4223 165.587 49.349 165.587 45.1589 167.196 39.4508 170.427 32.2497 171.75 35.7719 172.888 40.0652 173.842 45.133 174.624 46.2577 175.622 46.9001 176.844 47.0435 177.613 46.9001 178.482 46.6385 179.421 46.2844 180.545 45.6692 181.158 44.4392 181.258 42.606 179.535 35.5491 177.343 29.0677 174.668 23.1895 177.343 19.8115 179.877 16.3688 182.268 12.8332 183.592 10.8433 184.601 11.0661 185.271 13.527 185.655 15.216 186.039 16.8269 186.438 18.3578 187.548 20.349 188.217 19.9682 188.429 17.2059 188.602 15.5169 188.686 13.9065 188.686 12.3756 188.956 11.3022 189.569 10.2276 190.522 9.15431 190.522 7.41264 190.522 5.54016 190.522 3.55025 189.128 3.24932 187.762 2.47693 186.438 1.24602 185.271 1.10268 183.734 1.56033 181.841 2.63365 178.126 5.54016 174.055 9.7173 169.673 15.1379 166.84 15.2955 163.894 14.2213 160.834 11.9166 159.782 11.3022 158.628 10.4504 157.418 9.37709 155.797 9.37709 155.469 10.2276 156.408 11.9166 158.527 14.3642 161.716 17.4421 166 21.121 162.94 28.8449 160.279 37.0032 158.001 45.5906 154.272 45.4339 150.459 44.3597 146.573 42.3707 145.905 40.9951 145.578 39.7638 145.578 38.6905 146.232 37.7618 147.57 37.539 149.576 37.9967 151.184 38.4556 152.665 39.3061 153.988 40.5241 154.941 41.2961 155.938 41.5974 156.991 41.4528 157.945 40.8384 158.556 39.7638 158.827 38.2328 159.496 36.8452 158.685 35.4709 156.408 34.0829 156.905 29.5793 157.248 25.1134 157.418 20.6634 156.579 16.3688 154.829 13.6056 152.152 12.3756 150.714 12.6765 149.462 12.5323 148.41 11.9166 147.185 10.6853 145.621 9.99276 143.742 9.84812 142.673 10.7652 141.677 11.4577 140.739 11.9166 140.624 13.4489 140.424 14.9799 140.155 16.5121 139.871 18.0565 140.34 18.594 141.565 18.1225 143.186 17.5207 144.567 17.4421 145.733 17.9002 147.911 18.2011 149.377 19.5106 150.16 21.8153 150.16 24.8785 150.16 27.9024 150.16 30.8616 148.822 29.7883 147.427 28.9503 145.99 28.3346 143.812 28.1779 142.147 26.9211 140.98 24.5771 139.371 21.0416 138.291 17.1278 137.734 12.8332 136.682 11.9166 135.616 10.9214 134.562 9.84812 133.338 8.72256 132.54 9.40299 132.141 11.9166 133.096 17.5854 134.476 22.914 136.312 27.877 136.981 35.2343 137.678 42.4747 138.403 49.5843 138.503 50.9585 138.76 52.4247 139.145 53.957 140.211 54.8736 141.209 55.4098 142.147 55.5674 142.817 55.5674 143.627 55.3312 144.567 54.8736 145.349 54.5727 146.018 53.3426 146.573 51.1947 149.135 51.8104 151.74 52.4247 154.415 53.0279ZM179.678 62.2448C177.786 61.3148 176.447 61.3148 175.678 62.2448 174.568 64.078 173.558 65.871 172.676 67.6127 172.233 68.9869 172.233 70.375 172.676 71.7493 173.059 72.3662 173.928 72.7444 175.251 72.902 176.589 72.6011 177.786 72.0648 178.838 71.2916 180.46 69.7593 181.655 68.0716 182.424 66.2246 182.879 64.7977 182.767 63.619 182.097 62.7037ZM120.129 37.7618C117.469 38.2328 115.989 39.7638 115.718 42.3707 115.547 44.0584 115.689 45.7741 116.131 47.5158 116.53 49.0481 117.582 50.1214 119.304 50.7357L123.717 52.11C123.83 57.6359 124.228 63.1087 124.884 68.5293 125.439 69.6026 126.05 70.5192 126.72 71.2916 127.787 71.9073 128.926 71.9073 130.149 71.2916 131.359 70.375 132.17 68.7642 132.555 66.4608 133.066 62.7296 132.982 58.6306 132.312 54.1798 133.536 53.7208 134.419 52.5689 134.973 50.7357 135.202 49.6624 135.402 48.7337 135.557 47.9734 135.402 46.6912 134.732 45.3679 133.566 43.9802 132.726 43.2078 131.786 42.4492 130.733 41.6756 130.335 38.1547 130.007 34.6191 129.723 31.0978 130.563 31.3991 131.415 31.7122 132.312 32.0135 132.982 32.1711 133.721 32.0135 134.562 31.5559 135.23 30.1678 135.288 29.0163 134.732 28.0993 131.388 22.3778 127.203 17.2059 122.136 12.6104 120.799 11.9948 119.603 12.2175 118.55 13.2909 117.056 16.6701 116.771 19.4324 117.711 21.5787 120.003 23.4257 121.524 24.7999 122.308 25.7303 122.194 29.1459 122.136 32.7086 122.136 36.3862ZM229.247 55.7902C229.135 56.1036 228.749 56.6407 228.081 57.401 225.405 60.6344 223.597 63.4882 222.658 66.0018 222.928 68.2931 224.266 69.9169 226.657 70.8339 229.048 70.6759 231.268 69.145 233.332 66.2246 234.499 63.5664 234.087 61.3943 232.081 59.704 233.019 57.7141 232.891 55.9469 231.667 54.4159 233.831 54.8736 235.78 55.4098 237.501 56.0264 237.886 60.7786 238.357 65.6362 238.926 70.5978 239.694 73.6744 241.558 74.8919 244.505 74.2763 247.451 73.2029 248.987 70.9902 249.087 67.6127 248.987 65.7143 248.873 63.7771 248.76 61.7725 252.488 65.2027 256.147 68.5293 259.762 71.7493 262.052 73.1382 264.244 73.2815 266.35 72.2082 268.628 70.375 268.628 68.2012 266.35 65.6888 260.345 63.5409 254.538 61.3148 248.93 59.0115 248.816 58.2516 248.476 57.4792 247.92 56.7193 256.103 57.1783 264.244 56.7988 272.357 55.5674 276.256 55.8688 278.59 54.7955 279.359 52.3462 281.251 50.6576 281.722 48.89 280.782 47.0435 280.113 45.0022 277.865 44.2164 274.022 44.674 271.973 46.1022 269.753 46.6385 267.362 46.2844 262.123 44.7535 260.929 45.0022 263.774 47.0435 266.55 48.5891 269.211 50.1214 271.774 51.6523 266.72 52.7257 261.297 53.0279 255.521 52.5689 251.792 51.9537 248.533 51.2728 245.757 50.5009 240.647 48.1962 238.028 47.8953 237.914 49.5843 235.752 49.4263 233.603 49.1914 231.496 48.89 229.49 47.9734 227.027 47.5158 224.08 47.5158 221.235 46.6912 218.815 45.7474 216.823 44.674 216.325 42.985 216.267 41.0612 216.653 38.9132 217.321 37.6957 217.036 36.6224 215.812 35.6933 214.93 33.2444 213.351 32.0135 211.06 32.0135 209.736 33.3878 209.18 35.1562 209.394 37.3028 209.564 41.755 210.461 46.5331 212.069 51.6523 212.453 53.4981 213.849 54.1798 216.24 53.7208 217.463 53.2632 218.261 52.6475 218.659 51.8872 221.99 52.8051 225.605 53.5641 229.49 54.1798ZM251.094 47.9734C255.15 48.7337 257.568 47.6332 258.352 44.674 259.12 43.7453 258.466 41.755 256.346 38.6905 255.676 37.1586 255.491 36.0853 255.762 35.4709 254.936 32.8515 253.314 31.3991 250.923 31.0978 249.699 30.7835 248.846 30.0897 248.347 29.0163 247.792 27.9024 247.251 26.7238 246.753 25.4942 248.091 25.9518 249.429 26.3322 250.766 26.6456 254.879 26.9466 256.929 25.7303 256.929 22.9667 257.099 20.6634 255.564 18.7382 252.346 17.2059 250.454 16.7483 248.646 16.2112 246.924 15.5955 246.924 14.0646 246.981 12.3756 247.095 10.5286 253.812 10.8433 260.657 10.8433 267.603 10.5286 269.994 10.2276 271.048 8.05551 270.777 4.00919 270.38 1.56033 268.328 0.408863 264.601 0.565587 263.375 0.866514 261.767 1.10268 259.762 1.24602 251.207 1.71705 242.981 1.48218 235.083 0.565587 229.631-0.507733 225.69-0.0500825 223.242 1.94113 222.574 2.85643 222.046 4.16592 221.662 5.8549 222.602 7.73948 224.936 8.99629 228.663 9.61196 232.165 10.0709 235.637 10.3062 239.082 10.3062 239.082 12.2961 239.082 13.9065 239.082 15.1379 234.301 14.9799 231.169 15.975 229.661 18.1225 229.276 20.7406 230.415 22.2729 233.077 22.7306 234.97 22.5738 237.161 22.8886 239.665 23.6484 239.665 24.1061 239.665 24.4208 239.665 24.5771 237.829 23.9619 237.588 24.499 238.926 26.1867 238.754 26.8036 238.612 27.4314 238.498 28.0993 236.605 24.9834 234.883 24.8258 233.332 27.6417 230.885 30.246 229.419 34.0047 228.906 38.9132 229.021 41.0612 229.887 42.985 231.496 44.674 232.948 46.2577 234.329 46.2577 235.666 44.674 238.327 46.1022 241.558 47.1229 245.344 47.7386ZM247.508 40.9951C244.845 40.2227 242.228 39.3722 239.665 38.4556 238.996 37.8399 238.812 36.9233 239.082 35.6933 239.637 35.078 240.064 34.3963 240.334 33.6239 241.388 34.0829 242.526 34.5405 243.75 34.9982 245.087 35.6138 246.199 36.9233 247.095 38.9132Z" fill="#E60013" transform="matrix(1 0 0 -1.00223 1151.01 347.239)"/></g></g></g></g></svg>
+</div>
+
+<!-- 全屏拖拽遮罩 -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-overlay-inner">
+    <svg class="drop-overlay-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="drop-overlay-text">松开鼠标即可放入图片</div>
+    <div class="drop-overlay-sub">可拖放到页面任意位置</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ===== 元素引用 ===== */
+const $ = id => document.getElementById(id);
+
+const dz = $('dropZone'), pv = $('preview'), fi = $('fileInfo'), di = $('dimInfo');
+const stage = $('stage'), stageWrap = $('stageWrap'), stageImg = $('stageImg');
+const stageBorder = $('stageBorder'), stageEmpty = $('stageEmpty');
+const zoomSlider = $('zoomSlider'), zoomVal = $('zoomVal');
+const brightnessSlider = $('brightnessSlider'), brightnessVal = $('brightnessVal');
+const contrastSlider = $('contrastSlider'), contrastVal = $('contrastVal');
+const saturationSlider = $('saturationSlider'), saturationVal = $('saturationVal');
+const rotSlider = $('rotSlider'), rotVal = $('rotVal');
+const highlightSlider = $('highlightSlider'), highlightVal = $('highlightVal');
+const whitesSlider = $('whitesSlider'), whitesVal = $('whitesVal');
+const shadowSlider = $('shadowSlider'), shadowVal = $('shadowVal');
+const sizeSel = $('sizeSel');
+const holdBtn = $('holdBtn'), resetBtn = $('resetBtn');
+const exportBtn = $('exportBtn');
+const card = $('card'), overlay = $('overlay');
+const FMT_BTN = {
+  png: document.querySelector('.seg button[data-fmt=png]'),
+  jpg: document.querySelector('.seg button[data-fmt=jpg]')
+};
+
+/* ===== 常量与状态 ===== */
+const WIN = { cx: 1237.5, cy: 1237.5, size: 2339 };   // 边框窗口中心与尺寸（2475 坐标系）
+const BORDERS = {
+  rx: { el: 'b-rx', name: 'Rx' },
+  ja: { el: 'b-ja', name: '甲类OTC' },
+  yi: { el: 'b-yi', name: '乙类OTC' },
+  none: { el: null, name: '无边框' }
+};
+
+let cur = 'none';              // 当前边框（默认无边框）
+let img = null;                // 商品 HTMLImageElement
+let imgName = 'product';       // 商品原文件名（导出命名用）
+let origSrc = '';              // 商品原始 dataURL
+let defaultScale = 1;          // 适配窗口的基准缩放
+let fmt = 'jpg';               // 导出格式
+
+/* ===== 边框源 SVG ===== */
+function getBorderSvg(key) {
+  return document.getElementById(BORDERS[key].el);
+}
+
+function cloneBorderInto(key, container) {
+  container.innerHTML = '';
+  const clone = getBorderSvg(key).cloneNode(true);
+  clone.removeAttribute('id');   // 去掉重复 id，避免干扰 getElementById
+  container.appendChild(clone);
+}
+
+/* ===== 选项卡 ===== */
+function setBorder(key) {
+  cur = key;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.key === key));
+  if (key === 'none') {
+    stageBorder.innerHTML = '';              // 无边框模式：清空并隐藏
+    stageBorder.style.display = 'none';
+  } else {
+    cloneBorderInto(key, stageBorder);
+    stageBorder.style.display = 'block';
+  }
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setBorder(t.dataset.key)));
+
+// 选项卡迷你预览
+['rx', 'ja', 'yi'].forEach(k => cloneBorderInto(k, $('mini-' + k)));
+// 无边框迷你预览：纯白底方块
+
+/* ===== 预览缩放（随容器尺寸） ===== */
+function fitStage() {
+  const w = stage.clientWidth || 320;
+  stage.style.height = w + 'px';          // 保证方形，不依赖 aspect-ratio
+  stageWrap.style.transform = 'scale(' + (w / 2475) + ')';
+}
+const ro = new ResizeObserver(fitStage);
+ro.observe(stage);
+
+/* ===== 商品图放置 ===== */
+function placeProduct() {
+  if (!img) return;
+  const s = defaultScale * (+zoomSlider.value / 100);
+  const w = img.naturalWidth * s, h = img.naturalHeight * s;
+  stageImg.style.width = w + 'px';
+  stageImg.style.height = h + 'px';
+  stageImg.style.left = (WIN.cx - w / 2) + 'px';
+  stageImg.style.top = (WIN.cy - h / 2) + 'px';
+  stageImg.style.display = 'block';
+  stageEmpty.style.display = 'none';
+  // 边框显示由 setBorder 统一管理，此处不干预
+}
+
+/* ===== 基础调整：亮度 / 对比度 / 饱和度 / 旋转（CSS 滤镜，只作用于商品图） ===== */
+function refreshAdjustPreview() {
+  stageImg.style.filter = 'contrast(' + contrastSlider.value + '%) brightness(' + brightnessSlider.value + '%) saturate(' + saturationSlider.value + '%)';
+  stageImg.style.transform = 'rotate(' + rotSlider.value + 'deg)';
+  brightnessVal.textContent = brightnessSlider.value + '%';
+  contrastVal.textContent = contrastSlider.value + '%';
+  saturationVal.textContent = saturationSlider.value + '%';
+  rotVal.textContent = rotSlider.value + '°';
+}
+[brightnessSlider, contrastSlider, saturationSlider, rotSlider]
+  .forEach(s => s.addEventListener('input', refreshAdjustPreview));
+refreshAdjustPreview();
+
+/* ===== 色调调整：高光 / 白色色阶 / 阴影（像素级处理，只作用于商品图） ===== */
+function applyTone(data, h, w, s) {
+  h /= 100; w /= 100; s /= 100;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const l = 0.299 * r + 0.587 * g + 0.114 * b;
+    const mh = Math.max(0, Math.min(1, (l - 128) / 127));   // 高光：亮度 128 以上渐变生效
+    const mw = Math.max(0, Math.min(1, (l - 96) / 159));    // 白色：亮度 96 以上（范围更广）
+    const ms = Math.max(0, Math.min(1, (128 - l) / 128));   // 阴影：亮度 128 以下
+    const dlt = h * mh * 90 + w * mw * 100 + s * ms * 100;
+    data[i]     = Math.max(0, Math.min(255, r + dlt));
+    data[i + 1] = Math.max(0, Math.min(255, g + dlt));
+    data[i + 2] = Math.max(0, Math.min(255, b + dlt));
+  }
+}
+
+function renderTone(maxSide) {
+  const h = +highlightSlider.value, w = +whitesSlider.value, s = +shadowSlider.value;
+  if (h === 0 && w === 0 && s === 0) return img;   // 无需处理，返回原图
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  const k = Math.min(1, maxSide / Math.max(nw, nh));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(nw * k));
+  c.height = Math.max(1, Math.round(nh * k));
+  const cx = c.getContext('2d');
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(img, 0, 0, c.width, c.height);
+  const id = cx.getImageData(0, 0, c.width, c.height);
+  applyTone(id.data, h, w, s);
+  cx.putImageData(id, 0, 0);
+  return c;
+}
+
+function fmtAdj(v) { return v === 0 ? '0' : (v > 0 ? '+' : '') + v; }
+
+function refreshTonePreview() {
+  highlightVal.textContent = fmtAdj(+highlightSlider.value);
+  whitesVal.textContent = fmtAdj(+whitesSlider.value);
+  shadowVal.textContent = fmtAdj(+shadowSlider.value);
+  if (!img) return;
+  const c = renderTone(700);   // 预览小尺寸，实时无感
+  stageImg.src = (c === img) ? origSrc : c.toDataURL('image/png');
+}
+[highlightSlider, whitesSlider, shadowSlider]
+  .forEach(s => s.addEventListener('input', refreshTonePreview));
+refreshTonePreview();
+
+/* ===== 加载商品图 ===== */
+function loadFile(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  imgName = f.name.replace(/\.[^.]+$/, '');
+  const rdr = new FileReader();
+  rdr.onload = e => {
+    const im = new Image();
+    im.onload = () => {
+      img = im;
+      defaultScale = Math.min((WIN.size * 0.92) / im.naturalWidth, (WIN.size * 0.92) / im.naturalHeight);
+      origSrc = e.target.result;
+      pv.src = e.target.result;
+      stageImg.src = e.target.result;   // 合成预览区的商品图
+      di.textContent = im.naturalWidth + '×' + im.naturalHeight;
+      fi.textContent = f.name + ' · ' + (f.size < 1024 ? f.size + ' B' : (f.size / 1024).toFixed(1) + ' KB');
+      dz.classList.add('has-image');
+      exportBtn.disabled = false;
+      holdBtn.disabled = false;
+      resetBtn.disabled = false;
+      zoomSlider.value = 90;
+      zoomVal.textContent = '90%';
+      placeProduct();
+      refreshTonePreview();   // 新图按当前高光/白色/阴影设置重新处理
+      setBorder(cur);         // 上传后重新应用当前选中的边框，防止状态错乱
+    };
+    im.onerror = () => alert('图片加载失败，请换一张重试');
+    im.src = e.target.result;
+  };
+  rdr.readAsDataURL(f);
+}
+
+// 上传区：点击选择
+dz.addEventListener('click', () => {
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.onchange = () => { if (i.files[0]) loadFile(i.files[0]); };
+  i.click();
+});
+// 上传区：拖拽
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+/* ===== 商品大小滑杆 ===== */
+zoomSlider.addEventListener('input', () => {
+  zoomVal.textContent = zoomSlider.value + '%';
+  placeProduct();
+});
+
+/* ===== 按住看原图（取景式：按下反白，松开恢复） ===== */
+function showOriginalPreview() {
+  if (!img) return;
+  stageImg.src = origSrc;
+  stageImg.style.filter = 'none';
+  stageImg.style.transform = 'none';
+}
+
+function restoreAdjustedPreview() {
+  refreshAdjustPreview();
+  refreshTonePreview();
+}
+
+function setHoldState(on) {
+  holdBtn.classList.toggle('holding', on);
+}
+
+holdBtn.addEventListener('mousedown', e => { e.preventDefault(); setHoldState(true); showOriginalPreview(); });
+document.addEventListener('mouseup', () => { setHoldState(false); restoreAdjustedPreview(); });
+holdBtn.addEventListener('mouseleave', () => { setHoldState(false); restoreAdjustedPreview(); });
+holdBtn.addEventListener('touchstart', e => { e.preventDefault(); setHoldState(true); showOriginalPreview(); });
+holdBtn.addEventListener('touchend', () => { setHoldState(false); restoreAdjustedPreview(); });
+holdBtn.addEventListener('touchcancel', () => { setHoldState(false); restoreAdjustedPreview(); });
+
+/* ===== 重置所有商品调整（双击确认，防误触） ===== */
+let resetArmed = false, resetTimer = null;
+
+function doReset() {
+  resetArmed = false;
+  if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+  resetBtn.textContent = '重置';
+  resetBtn.classList.remove('confirming');
+  zoomSlider.value = 90; zoomVal.textContent = '90%';
+  brightnessSlider.value = 100; contrastSlider.value = 100; saturationSlider.value = 100;
+  rotSlider.value = 0;
+  highlightSlider.value = 0; whitesSlider.value = 0; shadowSlider.value = 0;
+  placeProduct();
+  refreshAdjustPreview();
+  refreshTonePreview();
+}
+
+resetBtn.addEventListener('click', () => {
+  if (resetArmed) { doReset(); return; }
+  resetArmed = true;
+  resetBtn.textContent = '是否确认重置？';
+  resetBtn.classList.add('confirming');   // 确认态变警示红
+  resetTimer = setTimeout(() => {
+    resetArmed = false;
+    resetBtn.textContent = '重置';
+    resetBtn.classList.remove('confirming');
+  }, 3000);
+});
+
+/* ===== 导出格式切换 ===== */
+Object.values(FMT_BTN).forEach(b => b.addEventListener('click', () => {
+  fmt = b.dataset.fmt;
+  Object.values(FMT_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 导出 ===== */
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+
+async function doExport() {
+  if (!img) return;
+  const isPng = fmt === 'png';
+  const N = +sizeSel.value, k = N / 2475;   // 目标尺寸与缩放系数
+  exportBtn.disabled = true;
+  card.classList.add('loading');
+  overlay.classList.add('show');
+  try {
+    const c = document.createElement('canvas');
+    c.width = N; c.height = N;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, N, N);
+
+    // 商品图（高光/白色/阴影需要时用像素处理后的画布）
+    const s = defaultScale * (+zoomSlider.value / 100);
+    const w = img.naturalWidth * s, h = img.naturalHeight * s;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    let prod = img;
+    const hAdj = +highlightSlider.value, wAdj = +whitesSlider.value, sAdj = +shadowSlider.value;
+    if (hAdj || wAdj || sAdj) {
+      const needW = Math.min(img.naturalWidth, Math.round(img.naturalWidth * defaultScale * (+zoomSlider.value / 100)));
+      const needH = Math.min(img.naturalHeight, Math.round(img.naturalHeight * defaultScale * (+zoomSlider.value / 100)));
+      prod = renderTone(Math.max(needW, needH));
+    }
+    ctx.save();
+    ctx.filter = 'contrast(' + contrastSlider.value + '%) brightness(' + brightnessSlider.value + '%) saturate(' + saturationSlider.value + '%)';
+    ctx.translate(WIN.cx * k, WIN.cy * k);
+    ctx.rotate((+rotSlider.value) * Math.PI / 180);
+    ctx.drawImage(prod, -w * k / 2, -h * k / 2, w * k, h * k);
+    ctx.restore();
+
+    // 边框 SVG（矢量，任意尺寸清晰；无边框模式跳过）
+    if (cur !== 'none') {
+      const svg = getBorderSvg(cur);
+      let str = new XMLSerializer().serializeToString(svg);
+      if (!/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/.test(str)) {
+        str = str.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const bimg = await loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str));
+      ctx.drawImage(bimg, 0, 0, N, N);
+    }
+
+    // 下载
+    const blob = await new Promise(r => c.toBlob(r, isPng ? 'image/png' : 'image/jpeg', isPng ? undefined : 0.95));
+    const name = imgName + '_' + BORDERS[cur].name + (N !== 2475 ? '_' + N : '') + '.' + (isPng ? 'png' : 'jpg');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  } catch (err) {
+    alert('导出失败：' + err.message);
+  }
+  exportBtn.disabled = false;
+  card.classList.remove('loading');
+  overlay.classList.remove('show');
+}
+exportBtn.addEventListener('click', doExport);
+
+/* ===== 全屏拖拽：页面任意位置拖入图片，延迟淡入模糊提示 ===== */
+const dropOverlay = $('dropOverlay');
+let dragDepth = 0, showTimer = null;
+
+function hideDropOverlay() {
+  if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+  dropOverlay.classList.remove('show');
+}
+
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+  dragDepth++;
+  if (!showTimer) showTimer = setTimeout(() => { dropOverlay.classList.add('show'); showTimer = null; }, 40);
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('dragleave', e => {
+  if (dragDepth > 0) dragDepth--;
+  if (dragDepth === 0) hideDropOverlay();
+});
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  dragDepth = 0;
+  hideDropOverlay();
+  if (e.dataTransfer && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+/* ===== 初始化 ===== */
+setBorder('none');   // 默认无边框（纯白底）
+fitStage();
+</script>
+</body>
+</html>
