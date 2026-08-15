@@ -273,6 +273,11 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
         <button class="active" data-fmt="png">PNG</button>
         <button data-fmt="jpg">JPG</button>
       </div>
+      <span class="control-label">导出方式</span>
+      <div class="seg" id="dlModeSeg">
+        <button class="active" data-dlmode="folder">存文件夹</button>
+        <button data-dlmode="each">逐个下载</button>
+      </div>
     </div>
     <div class="toolbar-group">
       <button class="btn btn-ghost" id="clearBtn" disabled>清空</button>
@@ -284,7 +289,7 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
   </div>
   <div class="status" id="status"></div>
 
-  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出文件名为"原名_白底.格式"</footer>
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出方式：存文件夹（推荐）/ 逐个下载</footer>
 </div>
 
 <div class="drop-overlay" id="dropOverlay">
@@ -418,6 +423,112 @@ clearBtn.addEventListener('click', () => {
   statusEl.className = 'status';
 });
 
+/* ===== 导出方式切换 ===== */
+let dlMode = 'folder';   // folder=存文件夹 / each=逐个下载
+const DL_MODE_BTN = {
+  folder: document.querySelector('#dlModeSeg button[data-dlmode=folder]'),
+  each: document.querySelector('#dlModeSeg button[data-dlmode=each]')
+};
+Object.values(DL_MODE_BTN).forEach(b => b.addEventListener('click', () => {
+  dlMode = b.dataset.dlmode;
+  Object.values(DL_MODE_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 单张绘制（白底）→ Blob ===== */
+async function renderBlob(it, mime, isPng) {
+  // 画布与商品放置
+  let cw, ch, dx, dy, dw, dh;
+  if (mode === 'fit') {
+    // 2475×2475 方图：商品适配窗口92%后缩放90%，居中
+    cw = ch = 2475;
+    const nw = it.im.naturalWidth, nh = it.im.naturalHeight;
+    const defaultScale = Math.min(2339 * 0.92 / nw, 2339 * 0.92 / nh);
+    const scale = defaultScale * 0.9;
+    dw = nw * scale; dh = nh * scale;
+    dx = 1237.5 - dw / 2; dy = 1237.5 - dh / 2;
+  } else {
+    // 原尺寸白底，不缩放
+    cw = it.im.naturalWidth; ch = it.im.naturalHeight;
+    dw = cw; dh = ch; dx = 0; dy = 0;
+  }
+  const c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(it.im, dx, dy, dw, dh);
+  return await new Promise(r => c.toBlob(r, mime, isPng ? undefined : 0.92));
+}
+
+function baseName(it, ext) {
+  return it.file.name.replace(/\.[^.]+$/, '') + '_白底.' + ext;
+}
+
+/* ===== 存文件夹模式（推荐：一次选目录，逐个写入，不经下载管理器） ===== */
+async function exportToFolder(isPng, mime, ext) {
+  if (!window.showDirectoryPicker) {
+    statusEl.textContent = '当前浏览器不支持存文件夹，请改用逐个下载';
+    return;
+  }
+  let dir;
+  try {
+    dir = await window.showDirectoryPicker();
+  } catch (e) {
+    if (e.name === 'AbortError') return;   // 用户取消选择
+    statusEl.textContent = '选择文件夹失败：' + e.message;
+    return;
+  }
+  let done = 0;
+  for (const it of items) {
+    statusEl.textContent = '正在保存 ' + (done + 1) + '/' + items.length + ' ...';
+    const blob = await renderBlob(it, mime, isPng);
+    // 同名自动加序号，避免覆盖
+    let name = baseName(it, ext);
+    let seq = 1;
+    for (;;) {
+      try {
+        await dir.getFileHandle(name);
+        name = it.file.name.replace(/\.[^.]+$/, '') + '_白底_' + (seq++) + '.' + ext;
+      } catch {
+        break;   // 不存在，可用
+      }
+    }
+    const fh = await dir.getFileHandle(name, { create: true });
+    const w = await fh.createWritable();
+    await w.write(blob);
+    await w.close();
+    done++;
+  }
+  return done;
+}
+
+/* ===== 逐个下载模式（浏览器会拦截多文件，仅用于少量图） ===== */
+async function exportEach(isPng, mime, ext) {
+  let done = 0;
+  const pendingUrls = [];
+  for (const it of items) {
+    statusEl.textContent = '正在导出 ' + (done + 1) + '/' + items.length + ' ...';
+    const blob = await renderBlob(it, mime, isPng);
+    const url = URL.createObjectURL(blob);
+    pendingUrls.push(url);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = baseName(it, ext);
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // 间隔触发下载，避免浏览器连续多文件下载被丢弃
+    await new Promise(r => setTimeout(r, 80));
+    done++;
+  }
+  // 全部触发后再释放，保留 60s 确保下载完成（正常下载早已开始）
+  setTimeout(() => pendingUrls.forEach(u => URL.revokeObjectURL(u)), 60000);
+  return done;
+}
+
 /* ===== 批量导出（白底） ===== */
 exportBtn.addEventListener('click', async () => {
   if (!items.length) return;
@@ -425,48 +536,25 @@ exportBtn.addEventListener('click', async () => {
   const mime = isPng ? 'image/png' : 'image/jpeg';
   const ext = isPng ? 'png' : 'jpg';
   const modeName = mode === 'fit' ? '居中缩放' : '原尺寸';
+  const useFolder = dlMode === 'folder' && !!window.showDirectoryPicker;
   exportBtn.disabled = true;
   clearBtn.disabled = true;
   statusEl.className = 'status';
-  let done = 0;
-  for (const it of items) {
-    statusEl.textContent = '正在导出 ' + (done + 1) + '/' + items.length + ' ...';
-    // 画布与商品放置
-    let cw, ch, dx, dy, dw, dh;
-    if (mode === 'fit') {
-      // 2475×2475 方图：商品适配窗口92%后缩放90%，居中
-      cw = ch = 2475;
-      const nw = it.im.naturalWidth, nh = it.im.naturalHeight;
-      const defaultScale = Math.min(2339 * 0.92 / nw, 2339 * 0.92 / nh);
-      const scale = defaultScale * 0.9;
-      dw = nw * scale; dh = nh * scale;
-      dx = 1237.5 - dw / 2; dy = 1237.5 - dh / 2;
-    } else {
-      // 原尺寸白底，不缩放
-      cw = it.im.naturalWidth; ch = it.im.naturalHeight;
-      dw = cw; dh = ch; dx = 0; dy = 0;
-    }
-    const c = document.createElement('canvas');
-    c.width = cw; c.height = ch;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, cw, ch);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(it.im, dx, dy, dw, dh);
-    const blob = await new Promise(r => c.toBlob(r, mime, isPng ? undefined : 0.92));
-    const name = it.file.name.replace(/\.[^.]+$/, '') + '_白底.' + ext;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    done++;
+  let done;
+  if (useFolder) {
+    done = await exportToFolder(isPng, mime, ext);
+  } else {
+    done = await exportEach(isPng, mime, ext);
+  }
+  if (done === undefined) {   // 用户取消选目录等
+    exportBtn.disabled = false;
+    clearBtn.disabled = false;
+    return;
   }
   exportBtn.disabled = false;
   clearBtn.disabled = false;
   statusEl.className = 'status done';
-  statusEl.textContent = '已导出 ' + done + ' 张白底图片（' + modeName + ' · ' + (isPng ? 'PNG' : 'JPG') + '）';
+  statusEl.textContent = (useFolder ? '已保存 ' : '已导出 ') + done + ' 张白底图片（' + modeName + ' · ' + (isPng ? 'PNG' : 'JPG') + '）';
 });
 </script>
 </body>
