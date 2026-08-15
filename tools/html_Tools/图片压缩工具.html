@@ -10,6 +10,7 @@
 --primary-hover:#4338ca;
 --primary-light:#eef2ff;
 --green:#059669;
+--green-hover:#047857;
 --green-light:#ecfdf5;
 --green-border:#a7f3d0;
 --red:#dc2626;
@@ -31,6 +32,7 @@ body{background:var(--bg);min-height:100vh;display:flex;justify-content:center;a
 .card{background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;width:100%;max-width:800px;position:relative;overflow:hidden;transition:filter .4s}
 .card.loading{pointer-events:none}
 h1{font-size:16px;font-weight:700;margin-bottom:20px}
+h1 small{display:block;font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px}
 .layout{display:flex;gap:24px}
 .left{width:200px;flex-shrink:0}
 .right{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -63,17 +65,17 @@ h1{font-size:16px;font-weight:700;margin-bottom:20px}
 .slider-wrap{position:relative;padding:0 2px}
 .slider-wrap input[type=range]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:6px;cursor:pointer}
 .slider-wrap input[type=range]::-webkit-slider-runnable-track{height:6px;background:#d1d5db;border-radius:3px}
-.slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-top:-6px;cursor:pointer;transition:.1s}
+.slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);margin-top:-5px;cursor:pointer;transition:.1s}
 .slider-wrap input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.1)}
 .slider-wrap input[type=range]::-moz-range-track{height:6px;background:#d1d5db;border-radius:3px;border:none}
 .slider-wrap input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--primary);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
 .slider-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:8px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--primary);color:#fff}
-.btn-primary:hover{background:var(--primary-hover);box-shadow:0 2px 8px rgba(79,70,229,.3)}
-.btn-primary:disabled{background:#c4c9d4;box-shadow:none;cursor:not-allowed}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green-hover);box-shadow:0 2px 8px rgba(5,150,101,.3)}
+.btn-green:disabled{background:#c4c9d4;box-shadow:none;cursor:not-allowed}
 .btn-download{background:var(--green);color:#fff}
-.btn-download:hover{background:#047857;box-shadow:0 2px 8px rgba(5,150,101,.3)}
+.btn-download:hover{background:var(--green-hover);box-shadow:0 2px 8px rgba(5,150,101,.3)}
 .result{display:block;margin-top:12px;max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .35s ease .1s}
 .result.open{max-height:300px;opacity:1}
 .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -110,7 +112,7 @@ body{padding:16px}
 </head>
 <body>
 <div class="card" id="card">
-<h1>图片压缩</h1>
+<h1>图片压缩<small>把图片压缩到指定大小以内，导出 JPG / PNG / WebP</small></h1>
 <div class="layout">
 <div class="left">
 <div class="upload-zone" id="dropZone">
@@ -142,7 +144,7 @@ body{padding:16px}
 <span id="sliderRight">500 KB</span>
 </div>
 </div>
-<button class="btn btn-primary" id="compressBtn" disabled>开始压缩</button>
+<button class="btn btn-green" id="compressBtn" disabled>开始压缩</button>
 <div class="result" id="result">
 <div class="result-grid">
 <div class="stat-box">
