@@ -270,12 +270,12 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
       </div>
       <span class="control-label">格式</span>
       <div class="seg">
-        <button class="active" data-fmt="png">PNG</button>
-        <button data-fmt="jpg">JPG</button>
+        <button data-fmt="png">PNG</button>
+        <button class="active" data-fmt="jpg">JPG</button>
       </div>
       <span class="control-label">导出方式</span>
       <div class="seg" id="dlModeSeg">
-        <button class="active" data-dlmode="folder">存文件夹</button>
+        <button class="active" data-dlmode="folder">指定文件夹</button>
         <button data-dlmode="each">逐个下载</button>
       </div>
     </div>
@@ -289,7 +289,7 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
   </div>
   <div class="status" id="status"></div>
 
-  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出方式：存文件夹（推荐）/ 逐个下载</footer>
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出方式：指定文件夹（推荐）/ 逐个下载</footer>
 </div>
 
 <div class="drop-overlay" id="dropOverlay">
@@ -312,7 +312,7 @@ const FMT_BTN = {
 };
 
 let items = [];   // { file, url, im }
-let fmt = 'png';
+let fmt = 'jpg';
 let mode = 'orig';   // orig=原尺寸白底 / fit=2475方图商品居中缩放
 
 /* ===== 导入 ===== */
@@ -424,7 +424,7 @@ clearBtn.addEventListener('click', () => {
 });
 
 /* ===== 导出方式切换 ===== */
-let dlMode = 'folder';   // folder=存文件夹 / each=逐个下载
+let dlMode = 'folder';   // folder=指定文件夹 / each=逐个下载
 const DL_MODE_BTN = {
   folder: document.querySelector('#dlModeSeg button[data-dlmode=folder]'),
   each: document.querySelector('#dlModeSeg button[data-dlmode=each]')
@@ -466,10 +466,10 @@ function baseName(it, ext) {
   return it.file.name.replace(/\.[^.]+$/, '') + '_白底.' + ext;
 }
 
-/* ===== 存文件夹模式（推荐：一次选目录，逐个写入，不经下载管理器） ===== */
+/* ===== 指定文件夹模式（推荐：一次选目录，逐个写入，不经下载管理器） ===== */
 async function exportToFolder(isPng, mime, ext) {
   if (!window.showDirectoryPicker) {
-    statusEl.textContent = '当前浏览器不支持存文件夹，请改用逐个下载';
+    statusEl.textContent = '当前浏览器不支持指定文件夹，请改用逐个下载';
     return;
   }
   let dir;

@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多图层合成工具</title>
+<style>
+/* ===== 设计变量（与其他工具统一） ===== */
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --green: #059669;
+  --green-hover: #047857;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --bg: #f3f4f6;
+  --card-bg: #fff;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.04);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14px;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 20px 12px;
+  width: 100%;
+  max-width: 1280px;
+  height: calc(100vh - 28px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: filter .4s;
+}
+.card.loading { pointer-events: none; }
+
+h1 { font-size: 15px; font-weight: 700; flex-shrink: 0; }
+h1 small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ===== 两栏布局：舞台顶满剩余高度，控制台独立滚动 ===== */
+.layout { display: flex; gap: 18px; align-items: stretch; margin-top: 10px; flex: 1; min-height: 0; }
+
+.left-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.right-col {
+  width: 380px;
+  flex-shrink: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+/* 面板禁止被压缩：素材区（assets-bar）是唯一允许伸缩吸收多余高度的区域 */
+.right-col > * { flex-shrink: 0; }
+.right-col > .assets-bar { flex-shrink: 1; }
+
+/* ===== 左栏：预览舞台 ===== */
+.stage-box {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+}
+.stage-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.stage-empty svg { width: 36px; height: 36px; fill: none; stroke: var(--text-muted); stroke-width: 1.5; }
+
+#stage {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+#bgLayer { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
+
+/* 投影层：每个实例一个 canvas，位于主体下方 */
+.proj { position: absolute; pointer-events: none; }
+
+/* 主体实例 */
+.item {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.item:hover .item-frame { opacity: 1; }
+
+.item-frame {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(79,70,229,.55);
+  opacity: 0;
+  transition: opacity .12s;
+  pointer-events: none;
+}
+
+/* 选中框 + 手柄（stage 层，不随主体旋转） */
+.sel-box {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--primary);
+  pointer-events: none;
+  z-index: 900;
+}
+.handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-radius: 2px;
+  z-index: 901;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.handle.n { cursor: ns-resize; }
+.handle.s { cursor: ns-resize; }
+.handle.e { cursor: ew-resize; }
+.handle.w { cursor: ew-resize; }
+.rot-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 1.5px solid var(--primary);
+  border-radius: 50%;
+  z-index: 902;
+  cursor: grab;
+  pointer-events: auto;
+}
+.rot-line {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 1px;
+  height: 20px;
+  background: var(--primary);
+  pointer-events: none;
+  z-index: 901;
+}
+.sel-box::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 1px;
+  height: 20px;
+  background: var(--primary);
+}
+
+/* 对齐参考线 */
+.guide {
+  position: absolute;
+  background: var(--primary);
+  z-index: 50;
+  pointer-events: none;
+  opacity: .9;
+}
+.guide.v { width: 1px; top: 0; bottom: 0; }
+.guide.h { height: 1px; left: 0; right: 0; }
+
+/* ===== 上传区（紧凑横条） ===== */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary-light), transparent 60%);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); }
+.upload-zone.has-image { padding: 4px 10px; border-style: solid; border-color: var(--border); background: var(--card-bg); }
+.upload-zone.has-image::before { display: none; }
+.upload-zone.has-image:hover { border-color: var(--primary); }
+.upload-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  flex-shrink: 0;
+  position: relative;
+}
+.upload-zone.has-image .upload-icon { display: none; }
+.upload-text { color: var(--text-secondary); font-size: 12px; line-height: 1.5; position: relative; }
+.upload-zone.has-image .upload-text { display: none; }
+.preview-area { display: none; flex: 1; min-width: 0; align-items: center; gap: 10px; position: relative; }
+.upload-zone.has-image .preview-area { display: flex; }
+.preview-img { max-width: 32px; max-height: 32px; border-radius: 5px; display: block; flex-shrink: 0; background: #fff; border: 1px solid var(--border); }
+.reupload-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.upload-zone.has-image .preview-area:hover .reupload-hint { display: flex; }
+.file-info { font-size: 11px; color: var(--text-secondary); word-break: break-all; line-height: 1.3; flex: 1; min-width: 0; }
+.dim-info { font-size: 10px; color: var(--text-muted); }
+
+/* ===== 素材条 ===== */
+.assets-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+  padding: 6px;
+  border: 2px dashed var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  transition: all .15s;
+}
+.assets-bar.dragover { border-color: var(--primary); background: var(--primary-light); }
+.assets-hint { font-weight: 400; color: var(--text-muted); font-size: 10px; }
+.assets-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+.assets-head .control-label { font-size: 12px; }
+.assets-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  flex: 1;
+  min-height: 44px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.asset-thumb {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  background: repeating-conic-gradient(#f1f3f5 0 25%, #fff 0 50%) 0 0/10px 10px;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.asset-thumb:hover { border-color: var(--primary); box-shadow: 0 1px 4px rgba(79,70,229,.15); }
+.asset-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+.asset-rm {
+  position: absolute;
+  top: 1px; right: 1px;
+  width: 13px;
+  height: 13px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17,24,39,.55);
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.asset-rm:hover { background: #dc2626; }
+.assets-empty { font-size: 11px; color: var(--text-muted); align-self: center; margin: auto; text-align: center; line-height: 1.6; }
+
+/* ===== 面板卡片 ===== */
+.panel {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px 10px;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-title .hint { font-weight: 400; color: var(--text-muted); font-size: 10px; }
+
+/* 滑块 */
+.adj-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.adj-row:last-child { margin-bottom: 0; }
+.adj-row .control-label { width: 42px; flex-shrink: 0; }
+.adj-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 6px;
+  cursor: pointer;
+}
+.adj-slider::-webkit-slider-runnable-track { height: 6px; background: #d1d5db; border-radius: 3px; }
+.adj-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  margin-top: -5px;
+  cursor: pointer;
+}
+.adj-slider::-moz-range-track { height: 6px; background: #d1d5db; border-radius: 3px; border: none; }
+.adj-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  cursor: pointer;
+}
+.adj-val { width: 38px; text-align: right; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* 方向按钮 + 阴影预览小方块 */
+.dir-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.dir-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; flex: 1; }
+.dir-btn {
+  padding: 3px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: center;
+}
+.dir-btn:hover { border-color: var(--primary); color: var(--primary); }
+.dir-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.dir-preview {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8f9fb;
+  display: block;
+}
+
+/* 颜色 */
+.color-row { display: flex; align-items: center; gap: 8px; }
+.color-row .control-label { width: 52px; flex-shrink: 0; }
+.color-pick {
+  width: 34px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  background: #fff;
+  cursor: pointer;
+}
+.color-pick::-webkit-color-swatch-wrapper { padding: 1px; }
+.color-pick::-webkit-color-swatch { border: none; border-radius: 4px; }
+.color-hex { font-size: 11px; color: var(--text-secondary); font-family: Consolas, monospace; }
+
+/* 分段选择器 */
+.seg { display: flex; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
+.seg button {
+  flex: 1;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+}
+.seg button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+.control-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.control-label { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+
+/* 按钮 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-hover); box-shadow: 0 2px 8px rgba(5,150,101,.3); }
+.btn-green:disabled { background: #c4c9d4; box-shadow: none; cursor: not-allowed; }
+.btn-ghost { background: #fff; color: var(--text-secondary); border: 2px solid var(--border); padding: 6px; }
+.btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+.btn-ghost:disabled { color: #c4c9d4; border-color: #d8dce4; cursor: not-allowed; }
+.btn-sm { padding: 4px 8px; font-size: 11px; width: auto; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; width: auto; }
+
+.status { margin-top: 6px; font-size: 12px; color: var(--text-secondary); min-height: 14px; }
+.status.done { color: var(--green); }
+
+footer { text-align: center; margin-top: 10px; font-size: 10px; color: var(--text-muted); line-height: 1.7; flex-shrink: 0; }
+footer span { display: block; }
+footer kbd {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+
+/* ===== 加载遮罩 ===== */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.overlay.show { display: flex; }
+.overlay-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.overlay-text { font-size: 14px; font-weight: 600; color: var(--text); }
+.overlay-sub { font-size: 12px; color: var(--text-muted); }
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== 响应式 ===== */
+@media (max-width: 980px) {
+  body { padding: 10px; }
+  .card { padding: 12px 16px 10px; height: calc(100vh - 20px); }
+  .layout { flex-direction: column; gap: 12px; }
+  .left-col { flex: 1; }
+  .right-col { width: 100%; max-height: 42%; }
+}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <h1>多图层合成工具<small>背景 + 主体图自由摆放合成，支持复制粘贴、拉伸旋转、智能对齐与任意方向投影</small></h1>
+
+  <div class="layout">
+
+    <!-- 左栏：预览舞台 -->
+    <div class="left-col">
+      <div class="stage-box" id="stageBox">
+        <div class="stage-empty" id="stageEmpty">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          先上传背景图，再导入主体素材
+        </div>
+        <div id="stage" style="display:none">
+          <img id="bgLayer" alt="">
+        </div>
+        <div class="guide v" id="guideV" style="display:none"></div>
+        <div class="guide h" id="guideH" style="display:none"></div>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <!-- 右栏：控制面板 -->
+    <div class="right-col">
+
+      <!-- 背景 -->
+      <div class="upload-zone" id="bgZone">
+        <svg class="upload-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <div class="upload-text">上传背景图（1 张）</div>
+        <div class="preview-area">
+          <img class="preview-img" id="bgPreview" alt="">
+          <div class="reupload-hint">点击更换</div>
+          <div class="file-info" id="bgInfo"></div>
+          <div class="dim-info" id="bgDims"></div>
+        </div>
+      </div>
+
+      <!-- 主体素材 -->
+      <div class="assets-bar" id="assetZone">
+        <div class="assets-head">
+          <span class="control-label">主体素材<span class="assets-hint">可拖入或点击导入</span></span>
+          <button class="btn btn-ghost btn-sm" id="addAssetBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            导入素材
+          </button>
+        </div>
+        <div class="assets-list" id="assetsList"></div>
+      </div>
+
+      <!-- 实例控制 -->
+      <div class="panel" id="itemPanel">
+        <div class="panel-title">实例 <span class="hint" id="selHint">未选中 · 点击舞台上的主体选中，可多选</span></div>
+        <div class="adj-row">
+          <span class="control-label">缩放</span>
+          <input type="range" class="adj-slider" id="scaleSlider" min="10" max="200" value="100" disabled>
+          <span class="adj-val" id="scaleVal">100%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">旋转</span>
+          <input type="range" class="adj-slider" id="rotSlider" min="-180" max="180" value="0" step="1" disabled>
+          <span class="adj-val" id="rotVal">0°</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="delBtn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            删除选中
+          </button>
+          <button class="btn btn-ghost" id="undoBtn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v0a6 6 0 0 1-6 6H8"/></svg>
+            撤销
+          </button>
+          <button class="btn btn-ghost" id="redoBtn" disabled>
+            <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0-6 6v0a6 6 0 0 0 6 6h6"/></svg>
+            重做
+          </button>
+        </div>
+      </div>
+
+      <!-- 阴影 -->
+      <div class="panel">
+        <div class="panel-title">阴影 <span class="hint">作用于全部实例</span></div>
+        <div class="dir-row">
+          <div class="dir-grid" id="dirGrid">
+            <button class="dir-btn" data-ang="225">↖</button>
+            <button class="dir-btn" data-ang="270">↑</button>
+            <button class="dir-btn" data-ang="315">↗</button>
+            <button class="dir-btn" data-ang="180">←</button>
+            <button class="dir-btn active" data-ang="45">↘</button>
+            <button class="dir-btn" data-ang="0">→</button>
+            <button class="dir-btn" data-ang="135">↙</button>
+            <button class="dir-btn" data-ang="90">↓</button>
+          </div>
+          <canvas class="dir-preview" id="dirPreview" width="112" height="112" title="阴影效果预览"></canvas>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">方向</span>
+          <input type="range" class="adj-slider" id="angSlider" min="0" max="360" value="45">
+          <span class="adj-val" id="angVal">45°</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">偏移</span>
+          <input type="range" class="adj-slider" id="distSlider" min="0" max="200" value="30">
+          <span class="adj-val" id="distVal">30</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">模糊</span>
+          <input type="range" class="adj-slider" id="blurSlider" min="0" max="120" value="20">
+          <span class="adj-val" id="blurVal">20</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">透明度</span>
+          <input type="range" class="adj-slider" id="opacitySlider" min="0" max="100" value="35">
+          <span class="adj-val" id="opacityVal">35%</span>
+        </div>
+        <div class="adj-row">
+          <span class="control-label">投影大小</span>
+          <input type="range" class="adj-slider" id="projScaleSlider" min="50" max="150" value="100">
+          <span class="adj-val" id="projScaleVal">100%</span>
+        </div>
+        <div class="color-row">
+          <span class="control-label">颜色</span>
+          <input type="color" class="color-pick" id="shadowColor" value="#000000">
+          <span class="color-hex" id="colorHex">#000000</span>
+        </div>
+      </div>
+
+      <!-- 导出 -->
+      <div class="control-row">
+        <span class="control-label">导出格式</span>
+        <div class="seg" style="width:180px" id="fmtSeg">
+          <button data-fmt="jpg" class="active">JPG</button>
+          <button data-fmt="png">PNG</button>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">导出方式</span>
+        <div class="seg" id="dlModeSeg">
+          <button class="active" data-dlmode="folder">指定文件夹</button>
+          <button data-dlmode="each">直接下载</button>
+        </div>
+      </div>
+      <button class="btn btn-green" id="exportBtn" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        导出合成图
+      </button>
+    </div>
+  </div>
+
+  <footer>
+    <span>选中｜<kbd>Ctrl+A</kbd>全选 <kbd>Ctrl+C</kbd>复制 <kbd>Ctrl+X</kbd>剪切 <kbd>Ctrl+V</kbd>粘贴 <kbd>Del</kbd>删除 <kbd>Ctrl+Z</kbd>撤销 <kbd>Ctrl+Y</kbd>重做</span>
+    <span>操作｜<kbd>Shift</kbd>拖角=等比 <kbd>Shift</kbd>吸附/15°对齐 · 拖角对角固定 · 导出恒等于背景尺寸，超出自动截断 · 纯本地处理不上传 · 导出方式：指定文件夹（推荐）/ 直接下载</span>
+  </footer>
+
+  <!-- 加载遮罩 -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-inner">
+      <div class="spinner"></div>
+      <div class="overlay-text" id="ovText">正在处理</div>
+      <div class="overlay-sub" id="ovSub"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* ===== 状态 ===== */
+const state = {
+  bg: null,            // { img, name, w, h }
+  assets: [],          // { id, img, name, w, h }
+  items: [],           // { id, assetId, cx, cy, w, h, rot }
+  sel: new Set(),      // 选中的 item id
+  shadow: { angle: 45, dist: 30, blur: 20, opacity: 35, color: '#000000', scale: 100 },
+  fmt: 'jpg',
+};
+const history = [];    // 快照栈 { items, shadow }
+let histIdx = -1;
+let uid = 1;
+
+const stageBox = $('stageBox'), stage = $('stage');
+const bgLayer = $('bgLayer'), stageEmpty = $('stageEmpty');
+const guideV = $('guideV'), guideH = $('guideH');
+const statusEl = $('status'), exportBtn = $('exportBtn');
+let scale = 1;         // 预览缩放：原始坐标 → 预览像素
+
+/* ===== 工具函数 ===== */
+function cloneItems() { return JSON.parse(JSON.stringify(state.items)); }
+function pushHistory() {
+  history.length = histIdx + 1;
+  history.push({ items: cloneItems(), shadow: { ...state.shadow } });
+  if (history.length > 50) history.shift();
+  histIdx = history.length - 1;
+  updateHistBtns();
+}
+function restoreSnapshot(snap) {
+  state.items = snap.items;
+  state.shadow = { ...snap.shadow };
+  syncShadowControls();
+  state.sel.clear();
+  renderAll();
+  updateHistBtns();
+}
+function updateHistBtns() {
+  $('undoBtn').disabled = histIdx < 0;
+  $('redoBtn').disabled = histIdx >= history.length - 1;
+}
+function setStatus(msg, ok) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status' + (ok ? ' done' : '');
+}
+function fmt(n) { return n >= 1024 ? (n / 1024).toFixed(1) + ' KB' : n + ' B'; }
+
+/* ===== 背景 ===== */
+function loadBg(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+  im.onload = () => {
+    state.bg = { img: im, name: file.name, w: im.naturalWidth, h: im.naturalHeight };
+    bgLayer.src = url;
+    bgLayer.style.width = '100%';
+    bgLayer.style.height = '100%';   // 跟随舞台容器（舞台已按背景等比缩放），避免大图只露左上角
+    stage.style.display = 'block';
+    stageEmpty.style.display = 'none';
+    $('bgZone').classList.add('has-image');
+    $('bgPreview').src = url;
+    $('bgInfo').textContent = file.name + ' ' + fmt(file.size);
+    $('bgDims').textContent = im.naturalWidth + '×' + im.naturalHeight;
+    fitStage();
+    requestAnimationFrame(fitStage);   // 布局稳定后再适配一次，确保超大图也完整入框
+    renderAll();
+    exportBtn.disabled = false;
+    setStatus('背景已加载：' + im.naturalWidth + '×' + im.naturalHeight, true);
+  };
+  im.src = url;
+}
+
+/* 舞台自适应：背景等比适配预览框（无论大小都完整显示） */
+function fitStage() {
+  if (!state.bg) return;
+  const boxW = stageBox.clientWidth, boxH = stageBox.clientHeight - 2;
+  if (!boxW || !boxH) return;   // 布局未就绪时跳过，ResizeObserver/下一帧会再触发
+  const s = Math.min(boxW / state.bg.w, boxH / state.bg.h);
+  scale = s;
+  stage.style.width = Math.round(state.bg.w * s) + 'px';
+  stage.style.height = Math.round(state.bg.h * s) + 'px';
+  stage.style.left = Math.round((boxW - state.bg.w * s) / 2) + 'px';
+  stage.style.top = Math.round((boxH - state.bg.h * s) / 2) + 'px';
+}
+new ResizeObserver(() => { if (state.bg) { fitStage(); layoutItems(); } }).observe(stageBox);
+
+/* ===== 素材 ===== */
+function loadAsset(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+  im.onload = () => {
+    const a = { id: 'a' + (uid++), img: im, name: file.name, w: im.naturalWidth, h: im.naturalHeight };
+    state.assets.push(a);
+    renderAssets();
+    addItem(a.id);
+  };
+  im.src = url;
+}
+function renderAssets() {
+  const list = $('assetsList');
+  list.innerHTML = '';
+  if (!state.assets.length) {
+    list.innerHTML = '<span class="assets-empty">还没有素材<br>把图片拖到这个区域，或点「导入素材」</span>';
+    return;
+  }
+  state.assets.forEach(a => {
+    const t = document.createElement('div');
+    t.className = 'asset-thumb';
+    t.title = a.name + '（点击添加到画布）';
+    t.innerHTML = '<img src="' + a.img.src + '" alt="">' +
+      '<button class="asset-rm" title="移除素材">×</button>';
+    t.addEventListener('click', e => {
+      if (e.target.classList.contains('asset-rm')) return;
+      addItem(a.id);
+    });
+    t.querySelector('.asset-rm').addEventListener('click', e => {
+      e.stopPropagation();
+      const keep = new Set();
+      state.items.forEach(it => { if (it.assetId !== a.id) keep.add(it.id); });
+      const removed = state.items.length - keep.size;
+      state.items = state.items.filter(it => it.assetId !== a.id);
+      state.assets = state.assets.filter(x => x.id !== a.id);
+      state.sel.clear();
+      renderAssets();
+      renderAll();
+      if (removed) { pushHistory(); setStatus('已移除素材及其 ' + removed + ' 个实例'); }
+    });
+    list.appendChild(t);
+  });
+}
+
+/* ===== 实例 ===== */
+function addItem(assetId) {
+  const a = state.assets.find(x => x.id === assetId);
+  if (!a || !state.bg) return;
+  const w = Math.round(state.bg.w * 0.4);
+  const h = Math.round(w * a.h / a.w);
+  const n = state.items.length;
+  state.items.push({
+    id: 'i' + (uid++),
+    assetId: a.id,
+    cx: state.bg.w / 2 + (n % 5) * 40,
+    cy: state.bg.h / 2 + Math.floor(n / 5) * 40,
+    w: w, h: h, rot: 0
+  });
+  state.sel.clear();
+  state.sel.add(state.items[state.items.length - 1].id);
+  pushHistory();
+  renderAll();
+  setStatus('已添加实例（共 ' + state.items.length + ' 个）');
+}
+
+function findItem(id) { return state.items.find(it => it.id === id); }
+function assetOf(it) { return state.assets.find(a => a.id === it.assetId); }
+
+/* ===== 渲染 ===== */
+function renderAll() {
+  // 清空舞台上的旧层
+  stage.querySelectorAll('.item, .proj, .sel-box, .handle, .rot-handle, .rot-line').forEach(el => el.remove());
+  hideGuides();
+  if (!state.bg) { renderSelectionUi(); return; }
+  layoutItems();
+  renderSelectionUi();
+  updateItemPanel();
+  updateCount();
+}
+
+function layoutItems() {
+  if (!state.bg) return;
+  const s = scale;
+  state.items.forEach(it => {
+    const zi = state.items.indexOf(it);
+    let el = stage.querySelector('.item[data-id="' + it.id + '"]');
+    if (!el) {
+      const a = assetOf(it);
+      el = document.createElement('div');
+      el.className = 'item';
+      el.dataset.id = it.id;
+      el.innerHTML = '<img src="' + a.img.src + '" alt=""><div class="item-frame"></div>';
+      el.style.zIndex = 20 + zi * 2;          // 主体
+      stage.appendChild(el);
+    }
+    const w = it.w * s, h = it.h * s;
+    el.style.left = (it.cx - it.w / 2) * s + 'px';
+    el.style.top = (it.cy - it.h / 2) * s + 'px';
+    el.style.width = w + 'px';
+    el.style.height = h + 'px';
+    el.style.transform = 'rotate(' + it.rot + 'deg)';
+    // 投影：独立层，z-index 比同一实例的主体低 1，且高于前一实例的主体
+    let proj = stage.querySelector('.proj[data-id="' + it.id + '"]');
+    if (!proj) {
+      proj = document.createElement('div');
+      proj.className = 'proj';
+      proj.dataset.id = it.id;
+      proj.style.zIndex = 19 + zi * 2;        // 投影（主体之下）
+      stage.appendChild(proj);
+    }
+    const pr = makeShadow(it, s);
+    if (pr) {
+      proj.style.display = 'block';
+      proj.style.width = pr.canvas.width + 'px';
+      proj.style.height = pr.canvas.height + 'px';
+      proj.style.left = Math.round(pr.x) + 'px';
+      proj.style.top = Math.round(pr.y) + 'px';
+      proj.replaceChildren(pr.canvas);
+    } else {
+      proj.style.display = 'none';
+    }
+  });
+}
+
+/* 旋转包围盒（原始坐标） */
+function rotatedBox(it) {
+  const r = it.rot * Math.PI / 180;
+  const c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r));
+  return { w: it.w * c + it.h * s, h: it.w * s + it.h * c };
+}
+
+/* 生成阴影位图（原始坐标），预览与导出共用。
+   mul：像素换算系数（预览=scale，导出=1） */
+function makeShadow(it, mul) {
+  const sh = state.shadow;
+  if (sh.opacity <= 0 || sh.scale <= 0) return null;
+  const a = assetOf(it);
+  if (!a) return null;
+  const rad = sh.angle * Math.PI / 180;
+  const box = rotatedBox(it);
+  const blur = sh.blur * mul, dist = sh.dist * mul;
+  // 1. 旋转后的主体 alpha（黑色 mask）
+  const src = document.createElement('canvas');
+  src.width = Math.max(1, Math.ceil(box.w * mul));
+  src.height = Math.max(1, Math.ceil(box.h * mul));
+  const sctx = src.getContext('2d');
+  sctx.translate(src.width / 2, src.height / 2);
+  sctx.rotate(it.rot * Math.PI / 180);
+  sctx.drawImage(a.img, -it.w * mul / 2, -it.h * mul / 2, it.w * mul, it.h * mul);
+  // 2. 黑 mask / 白 mask
+  const black = document.createElement('canvas');
+  black.width = src.width; black.height = src.height;
+  let c = black.getContext('2d');
+  c.drawImage(src, 0, 0);
+  c.globalCompositeOperation = 'source-in';
+  c.fillStyle = '#000';
+  c.fillRect(0, 0, black.width, black.height);
+  const white = document.createElement('canvas');
+  white.width = src.width; white.height = src.height;
+  c = white.getContext('2d');
+  c.drawImage(src, 0, 0);
+  c.globalCompositeOperation = 'source-in';
+  c.fillStyle = '#fff';
+  c.fillRect(0, 0, white.width, white.height);
+  // 3. 投影画布：尺寸 = 源×投影缩放 + 偏移/模糊余量
+  const sw = src.width * sh.scale / 100, shh = src.height * sh.scale / 100;
+  const pad = blur * 2 + dist + 12;
+  const out = document.createElement('canvas');
+  out.width = Math.max(1, Math.ceil(sw + pad * 2));
+  out.height = Math.max(1, Math.ceil(shh + pad * 2));
+  const o = out.getContext('2d');
+  const ox = Math.cos(rad) * dist, oy = Math.sin(rad) * dist;
+  // 阴影颜色带透明度（避免 destination-out 受 globalAlpha 影响残留本体）
+  const r = parseInt(sh.color.slice(1, 3), 16), g = parseInt(sh.color.slice(3, 5), 16), b = parseInt(sh.color.slice(5, 7), 16);
+  // 本体居中放置，阴影偏移用 shadowOffset 实现（偏移加在绘制位置会导致阴影与本体重叠被擦除）
+  const bx = pad + (sw - src.width) / 2;
+  const by = pad + (shh - src.height) / 2;
+  o.save();
+  o.shadowColor = 'rgba(' + r + ',' + g + ',' + b + ',' + (sh.opacity / 100) + ')';
+  o.shadowBlur = blur;
+  o.shadowOffsetX = ox;
+  o.shadowOffsetY = oy;
+  // 画黑色本体生成投影，再擦除本体区域（必须先清除 shadow，否则擦除动作会把阴影一起擦掉）
+  o.drawImage(black, bx, by, sw, shh);
+  o.globalCompositeOperation = 'destination-out';
+  o.shadowColor = 'transparent';
+  o.shadowBlur = 0;
+  o.shadowOffsetX = 0;
+  o.shadowOffsetY = 0;
+  o.drawImage(white, bx, by, sw, shh);
+  o.restore();
+  return { canvas: out, x: it.cx * mul - out.width / 2, y: it.cy * mul - out.height / 2 };
+}
+
+/* 选中框与手柄：单选时框跟随形状旋转（角=商品角，缩放严格跟手） */
+function renderSelectionUi() {
+  const old = stage.querySelectorAll('.sel-box, .handle, .rot-handle, .rot-line');
+  old.forEach(el => el.remove());
+  if (!state.bg || state.sel.size === 0) return;
+  const s = scale;
+  if (state.sel.size > 1) {
+    // 多选：轴对齐包围盒框（不显示手柄）
+    let minL = Infinity, minT = Infinity, maxR = -Infinity, maxB = -Infinity;
+    state.items.forEach(it => {
+      if (!state.sel.has(it.id)) return;
+      const box = rotatedBox(it);
+      const L = (it.cx - box.w / 2) * s, T = (it.cy - box.h / 2) * s;
+      minL = Math.min(minL, L); minT = Math.min(minT, T);
+      maxR = Math.max(maxR, L + box.w * s); maxB = Math.max(maxB, T + box.h * s);
+    });
+    const boxEl = document.createElement('div');
+    boxEl.className = 'sel-box';
+    boxEl.style.left = minL + 'px';
+    boxEl.style.top = minT + 'px';
+    boxEl.style.width = (maxR - minL) + 'px';
+    boxEl.style.height = (maxB - minT) + 'px';
+    stage.appendChild(boxEl);
+    return;
+  }
+  // 单选：框 = 形状尺寸并随 rot 旋转，手柄在框内局部坐标
+  const it = findItem([...state.sel][0]);
+  const boxEl = document.createElement('div');
+  boxEl.className = 'sel-box';
+  boxEl.style.left = (it.cx - it.w / 2) * s + 'px';
+  boxEl.style.top = (it.cy - it.h / 2) * s + 'px';
+  boxEl.style.width = it.w * s + 'px';
+  boxEl.style.height = it.h * s + 'px';
+  boxEl.style.transform = 'rotate(' + it.rot + 'deg)';
+  boxEl.style.transformOrigin = 'center center';
+  stage.appendChild(boxEl);
+  // 旋转手柄（框内顶部上方，随框旋转）
+  const rh = document.createElement('div');
+  rh.className = 'rot-handle';
+  rh.style.left = (it.w * s / 2 - 7) + 'px';
+  rh.style.top = (-37) + 'px';
+  boxEl.appendChild(rh);
+  // 8 个手柄（框内局部坐标，中心对准角/边中点）
+  const w = it.w * s, h = it.h * s;
+  const hs = [
+    ['nw', 0, 0], ['n', w / 2, 0], ['ne', w, 0], ['e', w, h / 2],
+    ['se', w, h], ['s', w / 2, h], ['sw', 0, h], ['w', 0, h / 2]
+  ];
+  hs.forEach(([cls, x, y]) => {
+    const hd = document.createElement('div');
+    hd.className = 'handle ' + cls;
+    hd.style.left = (x - 5) + 'px';
+    hd.style.top = (y - 5) + 'px';
+    boxEl.appendChild(hd);
+  });
+  bindHandles(it);
+}
+
+/* 手柄交互：缩放 / 拉伸 / 旋转（手柄在选中框内，随形状旋转） */
+function bindHandles(it) {
+  const s = scale;
+  const start = { cx: it.cx, cy: it.cy, w: it.w, h: it.h, rot: it.rot, mx: 0, my: 0 };
+  let mode = null;
+  stage.querySelectorAll('.sel-box .handle').forEach(h => {
+    h.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      mode = h.classList.contains('n') || h.classList.contains('s') ? 'v' :
+             h.classList.contains('e') || h.classList.contains('w') ? 'h' : 'corner';
+      // 角手柄是组合类名（nw/ne/sw/se），必须显式匹配
+      start.anchor = {
+        n: h.classList.contains('nw') || h.classList.contains('ne') || h.classList.contains('n'),
+        s: h.classList.contains('sw') || h.classList.contains('se') || h.classList.contains('s'),
+        e: h.classList.contains('ne') || h.classList.contains('se') || h.classList.contains('e'),
+        w: h.classList.contains('nw') || h.classList.contains('sw') || h.classList.contains('w')
+      };
+      const m0 = toStage(e);
+      start.mx = m0.x;   // toStage 已返回原始坐标，直接使用
+      start.my = m0.y;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp, { once: true });
+    });
+  });
+  stage.querySelectorAll('.sel-box .rot-handle').forEach(h => {
+    h.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      mode = 'rot';
+      const m0 = toStage(e);
+      // 记录按下时鼠标相对中心的方向，旋转按增量计算（避免按下瞬间角度跳变）
+      start.rot0 = Math.atan2(m0.y - it.cy, m0.x - it.cx) * 180 / Math.PI;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp, { once: true });
+    });
+  });
+  function onMove(e) {
+    const m = toStage(e);
+    if (mode === 'rot') {
+      // 增量旋转：初始角度 + 鼠标方向增量，按下时商品不跳动
+      let ang = Math.atan2(m.y - start.cy, m.x - start.cx) * 180 / Math.PI;
+      let rot = start.rot + (ang - start.rot0);
+      if (e.shiftKey) rot = Math.round(rot / 15) * 15;
+      it.rot = Math.round(rot);
+      layoutItems();
+      renderSelectionUi();
+      syncItemControls();
+    } else {
+      // 鼠标位移投影到实例局部坐标轴（toStage 已返回原始坐标）
+      const mx = m.x, my = m.y;
+      const rad = start.rot * Math.PI / 180;
+      const c0 = Math.cos(rad), s0 = Math.sin(rad);
+      const cosA = Math.cos(-rad), sinA = Math.sin(-rad);
+      const vx = mx - start.mx, vy = my - start.my;
+      const lx = vx * cosA - vy * sinA;   // 局部 x 位移
+      const ly = vx * sinA + vy * cosA;   // 局部 y 位移
+      if (mode === 'corner') {
+        const ex = start.anchor.e ? 1 : -1, ey = start.anchor.s ? 1 : -1;
+        if (e.shiftKey) {
+          // 等比：锚点 = 拖拽角的对角（世界坐标，旋转正确），按鼠标到锚点的距离比例缩放
+          const ax = start.cx - ex * start.w / 2 * c0 + ey * start.h / 2 * s0;
+          const ay = start.cy - ex * start.w / 2 * s0 - ey * start.h / 2 * c0;
+          const d0 = Math.hypot(start.w, start.h) || 1;
+          const d1 = Math.hypot(mx - ax, my - ay);
+          const k = Math.max(0.02, d1 / d0);
+          it.w = Math.max(4, Math.round(start.w * k));
+          it.h = Math.max(4, Math.round(start.h * k));
+        } else {
+          it.w = Math.max(4, Math.round(start.w + ex * lx));
+          it.h = Math.max(4, Math.round(start.h + ey * ly));
+        }
+      } else if (mode === 'v') {
+        it.h = Math.max(4, Math.round(start.h + (start.anchor.s ? ly : -ly)));
+        it.w = e.shiftKey ? Math.max(4, Math.round(it.h * start.w / start.h)) : start.w;
+      } else {
+        it.w = Math.max(4, Math.round(start.w + (start.anchor.e ? lx : -lx)));
+        it.h = e.shiftKey ? Math.max(4, Math.round(it.w * start.h / start.w)) : start.h;
+      }
+      // 锚点（对角或对边）固定：按新尺寸反推中心，再旋转回世界坐标
+      const dwL = (it.w - start.w) / 2, dhL = (it.h - start.h) / 2;
+      if (mode === 'corner') {
+        // 角手柄：中心修正 = R(rot)·(ex*dwL, ey*dhL)（旋转时对角依然纹丝不动）
+        const ex = start.anchor.e ? 1 : -1, ey = start.anchor.s ? 1 : -1;
+        it.cx = start.cx + ex * dwL * c0 - ey * dhL * s0;
+        it.cy = start.cy + ex * dwL * s0 + ey * dhL * c0;
+      } else if (mode === 'v') {
+        const sg = start.anchor.s ? 1 : -1;   // 's' 手柄：对边（上）固定，中心沿 +局部y 移动
+        it.cx = start.cx - sg * dhL * s0;
+        it.cy = start.cy + sg * dhL * c0;
+      } else {
+        const sg = start.anchor.e ? 1 : -1;   // 'e' 手柄：对边（左）固定，中心沿 +局部x 移动
+        it.cx = start.cx + sg * dwL * c0;
+        it.cy = start.cy + sg * dwL * s0;
+      }
+      layoutItems();
+      renderSelectionUi();
+      syncItemControls();
+    }
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    pushHistory();
+    setStatus('已调整实例');
+  }
+}
+
+/* 鼠标 → 舞台原始坐标 */
+function toStage(e) {
+  const r = stage.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
+}
+
+/* ===== 拖动 + 智能对齐 ===== */
+function isInteractiveArea(el) {
+  // 判断点击目标是否属于"不该取消选中"的交互区（舞台实例/手柄/控件/上传区等）
+  if (!el) return false;
+  if (el.closest('.item') || el.closest('.handle') || el.closest('.rot-handle')) return true;
+  if (el.closest('.upload-zone') || el.closest('.assets-bar')) return true;
+  if (el.closest('button') || el.closest('input') || el.closest('select')) return true;
+  return false;
+}
+
+// 点击舞台内空白 / 背景 / 框外空白 / 非交互区 → 取消选中
+document.addEventListener('mousedown', e => {
+  if (state.sel.size && !isInteractiveArea(e.target)) {
+    state.sel.clear();
+    renderSelectionUi();
+    updateItemPanel();
+  }
+});
+
+function bindItemDrag() {
+  stage.addEventListener('mousedown', e => {
+    if (isInteractiveArea(e.target)) {
+      e.preventDefault();   // 防止浏览器默认拖拽图片
+    }
+    if (e.shiftKey) {
+      const itemEl = e.target.closest('.item');
+      if (itemEl) {
+        const it = findItem(itemEl.dataset.id);
+        if (it) {
+          // 加选/减选
+          state.sel.has(it.id) ? state.sel.delete(it.id) : state.sel.add(it.id);
+          renderSelectionUi(); updateItemPanel();
+        }
+      }
+      return;
+    }
+    const itemEl = e.target.closest('.item');
+    if (!itemEl) return;   // 空白区选中已由 document 级处理
+    const it = findItem(itemEl.dataset.id);
+    if (!it) return;
+    if (!state.sel.has(it.id)) {
+      state.sel.clear();
+      state.sel.add(it.id);
+      renderSelectionUi(); updateItemPanel();
+    }
+    const startPos = {};
+    state.items.forEach(x => { if (state.sel.has(x.id)) startPos[x.id] = { cx: x.cx, cy: x.cy }; });
+    const startMouse = { x: e.clientX, y: e.clientY };
+    const snapHold = {};   // 吸附记忆：itemId → { v:[线,线,线], h:[线,线,线] }，仅用于防边界抖动，脱离即释放
+    let moved = false;
+    function onMove(ev) {
+      const dx = (ev.clientX - startMouse.x) / scale;
+      const dy = (ev.clientY - startMouse.y) / scale;
+      moved = moved || Math.abs(dx) > 0.2 || Math.abs(dy) > 0.2;
+      if (!moved) return;
+      // 基准位置 = 抓取点 + 鼠标位移：完全跟手（不残留任何吸附偏移）
+      state.items.forEach(x => {
+        if (state.sel.has(x.id)) {
+          x.cx = startPos[x.id].cx + dx;
+          x.cy = startPos[x.id].cy + dy;
+        }
+      });
+      updateGuides(snapHold);   // 临时吸附：仅本帧生效，一旦脱离立即回到鼠标位置
+      layoutItems();            // 再按修正后的坐标摆放
+      renderSelectionUi();      // 选中框跟随主体
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      hideGuides();
+      if (moved) { pushHistory(); }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp, { once: true });
+  });
+}
+
+/* 对齐参考线：临时吸附 —— 每帧基于"抓取点+鼠标位移"重算，吸附只在本帧生效；
+   吸附后记住所贴的线，离开其 2 倍阈值才放手并回到鼠标位置，绝不残留偏移 */
+const SNAP_PX = 3;        // 吸附阈值（预览像素）：足够接近边缘才吸附
+const SNAP_RELEASE = 1.5;   // 释放倍数：离开吸附线 1.5 倍阈值即放手（防止边界抖动，又不粘手）
+function updateGuides(hold) {
+  if (!state.bg) return;
+  const s = scale;
+  const tol = SNAP_PX / s;
+  const rel = SNAP_RELEASE * tol;
+  const vLines = [], hLines = [];
+  const others = state.items.filter(x => !state.sel.has(x.id));
+  others.forEach(x => {
+    vLines.push(x.cx - x.w / 2, x.cx, x.cx + x.w / 2);
+    hLines.push(x.cy - x.h / 2, x.cy, x.cy + x.h / 2);
+  });
+  vLines.push(0, state.bg.w / 2, state.bg.w);
+  hLines.push(0, state.bg.h / 2, state.bg.h);
+  const showV = [], showH = [];
+  state.items.forEach(x => {
+    if (!state.sel.has(x.id)) return;
+    const hd = hold[x.id] || (hold[x.id] = { v: [null, null, null], h: [null, null, null] });
+    const vv = [x.cx - x.w / 2, x.cx, x.cx + x.w / 2];
+    const hh = [x.cy - x.h / 2, x.cy, x.cy + x.h / 2];
+    // 垂直方向：左/中/右三条线各自尝试吸附
+    vv.forEach((v, i) => {
+      let target = null;
+      // 还贴着的线在释放范围内 → 继续保持，避免边界来回抖动
+      if (hd.v[i] !== null && Math.abs(v - hd.v[i]) < rel) {
+        target = hd.v[i];
+      } else {
+        let best = null, bd = tol;
+        vLines.forEach(r => { const d = Math.abs(v - r); if (d < bd) { bd = d; best = r; } });
+        if (best !== null) target = best;
+      }
+      if (target !== null) {
+        hd.v[i] = target;
+        x.cx += target - v;   // 临时修正：仅本帧
+        showV.push(target);
+      } else hd.v[i] = null;
+    });
+    // 水平方向同理
+    hh.forEach((h, i) => {
+      let target = null;
+      if (hd.h[i] !== null && Math.abs(h - hd.h[i]) < rel) {
+        target = hd.h[i];
+      } else {
+        let best = null, bd = tol;
+        hLines.forEach(r => { const d = Math.abs(h - r); if (d < bd) { bd = d; best = r; } });
+        if (best !== null) target = best;
+      }
+      if (target !== null) {
+        hd.h[i] = target;
+        x.cy += target - h;
+        showH.push(target);
+      } else hd.h[i] = null;
+    });
+  });
+  if (showV.length) {
+    guideV.style.display = 'block';
+    guideV.style.left = (showV[0] * s + stage.offsetLeft) + 'px';
+  } else guideV.style.display = 'none';
+  if (showH.length) {
+    guideH.style.display = 'block';
+    guideH.style.top = (showH[0] * s + stage.offsetTop) + 'px';
+  } else guideH.style.display = 'none';
+}
+function hideGuides() { guideV.style.display = 'none'; guideH.style.display = 'none'; }
+
+/* ===== 选中计数 / 面板 ===== */
+function updateCount() {
+  exportBtn.disabled = !state.bg;
+}
+function updateItemPanel() {
+  const n = state.sel.size;
+  const disabled = n === 0;
+  ['scaleSlider', 'rotSlider', 'delBtn'].forEach(id => $(id).disabled = disabled);
+  $('selHint').textContent = n === 0 ? '未选中 · 点击舞台上的主体选中，可多选' :
+    n === 1 ? '已选中 1 个实例' : '已选中 ' + n + ' 个实例（多选不支持手柄）';
+  syncItemControls();
+}
+function syncItemControls() {
+  if (state.sel.size === 1) {
+    const it = findItem([...state.sel][0]);
+    const a = assetOf(it);
+    const pct = Math.round(it.w / a.w * 100);
+    $('scaleSlider').value = pct;
+    $('scaleVal').textContent = pct + '%';
+    $('rotSlider').value = it.rot;
+    $('rotVal').textContent = it.rot + '°';
+  }
+}
+$('scaleSlider').addEventListener('input', e => {
+  if (state.sel.size !== 1) return;
+  const it = findItem([...state.sel][0]);
+  const a = assetOf(it);
+  const pct = +e.target.value;
+  const w = Math.max(4, Math.round(a.w * pct / 100));
+  const h = Math.max(4, Math.round(a.h * pct / 100));
+  it.cx += (w - it.w) / 2; it.cy += (h - it.h) / 2;
+  it.w = w; it.h = h;
+  $('scaleVal').textContent = pct + '%';
+  layoutItems(); renderSelectionUi();
+});
+$('scaleSlider').addEventListener('change', () => { pushHistory(); });
+$('rotSlider').addEventListener('input', e => {
+  if (state.sel.size !== 1) return;
+  const it = findItem([...state.sel][0]);
+  it.rot = +e.target.value;
+  $('rotVal').textContent = it.rot + '°';
+  layoutItems(); renderSelectionUi();
+});
+$('rotSlider').addEventListener('change', () => { pushHistory(); });
+
+$('delBtn').addEventListener('click', () => {
+  if (!state.sel.size) return;
+  state.items = state.items.filter(it => !state.sel.has(it.id));
+  state.sel.clear();
+  pushHistory();
+  renderAll();
+  setStatus('已删除选中实例');
+});
+
+$('undoBtn').addEventListener('click', () => { if (histIdx > 0) { histIdx--; restoreSnapshot(history[histIdx]); } });
+$('redoBtn').addEventListener('click', () => { if (histIdx < history.length - 1) { histIdx++; restoreSnapshot(history[histIdx]); } });
+
+/* ===== 阴影控制 ===== */
+function rr(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* 阴影预览小方块：实时显示当前方向/偏移/模糊/透明度/颜色/投影缩放 */
+function drawDirPreview() {
+  const dp = $('dirPreview');
+  if (!dp) return;
+  const ctx = dp.getContext('2d');
+  const W = dp.width, H = dp.height;
+  ctx.clearRect(0, 0, W, H);
+  // 棋盘底
+  const cs = 16;
+  for (let y = 0; y < H; y += cs)
+    for (let x = 0; x < W; x += cs) {
+      ctx.fillStyle = ((x / cs + y / cs) % 2 === 0) ? '#f1f3f5' : '#fff';
+      ctx.fillRect(x, y, cs, cs);
+    }
+  const sh = state.shadow;
+  const cx = W / 2, cy = H / 2;
+  const bw = 44, bh = 44, rad = 8;                       // 主体方块
+  const distPx = 5 + sh.dist / 200 * 14;                 // 偏移映射
+  const blurPx = 2 + sh.blur / 120 * 9;                  // 模糊映射
+  const ox = Math.cos(sh.angle * Math.PI / 180) * distPx;
+  const oy = Math.sin(sh.angle * Math.PI / 180) * distPx;
+  const sw = bw * sh.scale / 100, shh = bh * sh.scale / 100;
+  const r = parseInt(sh.color.slice(1, 3), 16), g = parseInt(sh.color.slice(3, 5), 16), b = parseInt(sh.color.slice(5, 7), 16);
+  // 离屏生成阴影（黑主体 + shadow → destination-out 擦除本体）
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const o = off.getContext('2d');
+  o.save();
+  o.shadowColor = 'rgba(' + r + ',' + g + ',' + b + ',' + (sh.opacity / 100) + ')';
+  o.shadowBlur = blurPx;
+  o.shadowOffsetX = ox;
+  o.shadowOffsetY = oy;
+  rr(o, cx - sw / 2, cy - shh / 2, sw, shh, rad * (sw / bw));
+  o.fillStyle = '#000'; o.fill();
+  o.globalCompositeOperation = 'destination-out';
+  o.shadowColor = 'transparent';
+  o.shadowBlur = 0;
+  o.shadowOffsetX = 0;
+  o.shadowOffsetY = 0;
+  rr(o, cx - sw / 2, cy - shh / 2, sw, shh, rad * (sw / bw));
+  o.fillStyle = '#fff'; o.fill();
+  o.restore();
+  ctx.drawImage(off, 0, 0);
+  // 主体参照框
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  rr(ctx, cx - bw / 2, cy - bh / 2, bw, bh, rad); ctx.fill();
+  ctx.strokeStyle = '#b9bfc9'; ctx.lineWidth = 2;
+  rr(ctx, cx - bw / 2, cy - bh / 2, bw, bh, rad); ctx.stroke();
+}
+
+function syncShadowControls() {
+  const sh = state.shadow;
+  $('angSlider').value = sh.angle;
+  $('angVal').textContent = sh.angle + '°';
+  $('distSlider').value = sh.dist;
+  $('distVal').textContent = sh.dist;
+  $('blurSlider').value = sh.blur;
+  $('blurVal').textContent = sh.blur;
+  $('opacitySlider').value = sh.opacity;
+  $('opacityVal').textContent = sh.opacity + '%';
+  $('projScaleSlider').value = sh.scale;
+  $('projScaleVal').textContent = sh.scale + '%';
+  $('shadowColor').value = sh.color;
+  $('colorHex').textContent = sh.color;
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.toggle('active', +b.dataset.ang === sh.angle));
+  drawDirPreview();
+}
+function bindShadowControls() {
+  const map = [
+    ['angSlider', 'angle', v => v + '°'],
+    ['distSlider', 'dist', v => v],
+    ['blurSlider', 'blur', v => v],
+    ['opacitySlider', 'opacity', v => v + '%'],
+    ['projScaleSlider', 'scale', v => v + '%'],
+  ];
+  map.forEach(([id, key, fmtv]) => {
+    $(id).addEventListener('input', e => {
+      state.shadow[key] = +e.target.value;
+      $(id === 'angSlider' ? 'angVal' : id === 'distSlider' ? 'distVal' : id === 'blurSlider' ? 'blurVal' : id === 'opacitySlider' ? 'opacityVal' : 'projScaleVal').textContent = fmtv(+e.target.value);
+      if (key === 'angle') {
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.toggle('active', +b.dataset.ang === state.shadow.angle));
+      }
+      refreshShadow();
+    });
+    $(id).addEventListener('change', () => { pushHistory(); });
+  });
+  $('shadowColor').addEventListener('input', e => {
+    state.shadow.color = e.target.value;
+    $('colorHex').textContent = e.target.value;
+    refreshShadow();
+  });
+  $('shadowColor').addEventListener('change', () => { pushHistory(); });
+  document.querySelectorAll('.dir-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      state.shadow.angle = +b.dataset.ang;
+      document.querySelectorAll('.dir-btn').forEach(x => x.classList.toggle('active', x === b));
+      $('angSlider').value = state.shadow.angle;
+      $('angVal').textContent = state.shadow.angle + '°';
+      refreshShadow();
+      pushHistory();
+    });
+  });
+}
+function refreshShadow() {
+  drawDirPreview();
+  state.items.forEach(it => {
+    let proj = stage.querySelector('.proj[data-id="' + it.id + '"]');
+    if (!proj) {
+      proj = document.createElement('div');
+      proj.className = 'proj';
+      proj.dataset.id = it.id;
+      proj.style.zIndex = 19 + state.items.indexOf(it) * 2;
+      stage.appendChild(proj);
+    }
+    const pr = makeShadow(it, scale);
+    if (pr) {
+      proj.style.display = 'block';
+      proj.style.width = pr.canvas.width + 'px';
+      proj.style.height = pr.canvas.height + 'px';
+      proj.style.left = Math.round(pr.x) + 'px';
+      proj.style.top = Math.round(pr.y) + 'px';
+      proj.replaceChildren(pr.canvas);
+    } else proj.style.display = 'none';
+  });
+}
+
+/* ===== 快捷键 ===== */
+document.addEventListener('keydown', e => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const inField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    if (!state.bg) return;
+    state.sel = new Set(state.items.map(x => x.id));
+    renderSelectionUi(); updateItemPanel();
+    setStatus('已全选 ' + state.sel.size + ' 个');
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'c') {
+    if (inField) return;
+    if (!state.sel.size) return;   // 未选中实例 → 放行浏览器默认复制（可复制页面文字）
+    e.preventDefault();
+    copySel();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'x') {
+    if (inField) return;
+    if (!state.sel.size) return;   // 未选中实例 → 放行浏览器默认剪切
+    e.preventDefault();
+    cutSel();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'v') {
+    if (inField) return;
+    if (!clip.length) return;      // 无已复制内容 → 放行浏览器默认粘贴
+    e.preventDefault();
+    pasteClip();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (histIdx > 0) { histIdx--; restoreSnapshot(history[histIdx]); setStatus('已撤销'); }
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    if (histIdx < history.length - 1) { histIdx++; restoreSnapshot(history[histIdx]); setStatus('已重做'); }
+    return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !inField && state.sel.size) {
+    e.preventDefault();
+    state.items = state.items.filter(it => !state.sel.has(it.id));
+    state.sel.clear();
+    pushHistory();
+    renderAll();
+    setStatus('已删除选中实例');
+  }
+});
+let clip = [];   // 剪贴板：{ assetId, w, h, rot }
+function copySel() {
+  clip = state.items.filter(it => state.sel.has(it.id)).map(it => ({ assetId: it.assetId, w: it.w, h: it.h, rot: it.rot }));
+  setStatus(clip.length ? '已复制 ' + clip.length + ' 个，Ctrl+V 粘贴' : '未选中任何实例');
+}
+function cutSel() {
+  copySel();
+  state.items = state.items.filter(it => !state.sel.has(it.id));
+  state.sel.clear();
+  pushHistory();
+  renderAll();
+  if (clip.length) setStatus('已剪切 ' + clip.length + ' 个，Ctrl+V 粘贴');
+}
+function pasteClip() {
+  if (!state.bg || !clip.length) return;
+  const oldSel = new Set();
+  clip.forEach(c => {
+    const item = {
+      id: 'i' + (uid++), assetId: c.assetId, w: c.w, h: c.h, rot: c.rot,
+      cx: state.bg.w / 2 + Math.random() * 60 - 30,
+      cy: state.bg.h / 2 + Math.random() * 60 - 30
+    };
+    state.items.push(item);
+    oldSel.add(item.id);
+  });
+  state.sel = oldSel;
+  pushHistory();
+  renderAll();
+  setStatus('已粘贴 ' + clip.length + ' 个');
+}
+
+/* ===== 上传事件 ===== */
+function pickFile(zone, multi, cb) {
+  zone.addEventListener('click', () => {
+    const i = document.createElement('input');
+    i.type = 'file';
+    i.accept = 'image/*';
+    i.multiple = multi;
+    i.onchange = () => { if (i.files.length) cb(i.files); };
+    i.click();
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) cb(e.dataTransfer.files);
+  });
+}
+pickFile($('bgZone'), false, files => loadBg(files[0]));
+$('addAssetBtn').addEventListener('click', () => {
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.multiple = true;
+  i.onchange = () => { if (i.files.length) Array.from(i.files).forEach(loadAsset); };
+  i.click();
+});
+// 素材区：区域内拖拽上传（仅限此区域，不是全屏）
+const assetZone = $('assetZone');
+assetZone.addEventListener('dragover', e => { e.preventDefault(); assetZone.classList.add('dragover'); });
+assetZone.addEventListener('dragleave', () => assetZone.classList.remove('dragover'));
+assetZone.addEventListener('drop', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  assetZone.classList.remove('dragover');
+  const imgs = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+  if (imgs.length) imgs.forEach(loadAsset);
+});
+
+/* ===== 导出 ===== */
+$('fmtSeg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  state.fmt = b.dataset.fmt;
+  $('fmtSeg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+});
+
+/* ===== 导出方式切换：指定文件夹 / 直接下载 ===== */
+let dlMode = 'folder';   // folder=指定文件夹 / each=直接下载
+const DL_MODE_BTN = {
+  folder: document.querySelector('#dlModeSeg button[data-dlmode=folder]'),
+  each: document.querySelector('#dlModeSeg button[data-dlmode=each]')
+};
+Object.values(DL_MODE_BTN).forEach(b => b.addEventListener('click', () => {
+  dlMode = b.dataset.dlmode;
+  Object.values(DL_MODE_BTN).forEach(x => x.classList.toggle('active', x === b));
+}));
+
+/* ===== 保存文件：指定文件夹（File System Access API，一次选目录直接写入）/ 直接下载 ===== */
+async function saveBlob(blob, name) {
+  if (dlMode === 'folder' && window.showDirectoryPicker) {
+    let dir;
+    try {
+      dir = await window.showDirectoryPicker();
+    } catch (err) {
+      if (err && err.name === 'AbortError') return 'cancel';   // 用户取消选目录
+      return 'error';
+    }
+    // 同名自动加序号，避免覆盖
+    let n = name, seq = 1;
+    for (;;) {
+      try { await dir.getFileHandle(n); n = name.replace(/\.[^.]+$/, '') + '_' + (seq++) + '.' + name.split('.').pop(); }
+      catch { break; }
+    }
+    try {
+      const fh = await dir.getFileHandle(n, { create: true });
+      const w = await fh.createWritable();
+      await w.write(blob);
+      await w.close();
+      return 'folder';
+    } catch (err) {
+      return 'error';
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  return 'download';
+}
+exportBtn.addEventListener('click', async () => {
+  if (!state.bg) return;
+  const ov = $('overlay');
+  ov.classList.add('show');
+  $('ovText').textContent = '正在合成';
+  $('ovSub').textContent = state.bg.w + '×' + state.bg.h + ' · ' + (state.fmt === 'png' ? 'PNG' : 'JPG');
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const c = document.createElement('canvas');
+    c.width = state.bg.w;
+    c.height = state.bg.h;
+    const ctx = c.getContext('2d');
+    if (state.fmt === 'jpg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+    ctx.drawImage(state.bg.img, 0, 0, c.width, c.height);
+    state.items.forEach(it => {
+      const pr = makeShadow(it, 1);
+      if (pr) ctx.drawImage(pr.canvas, Math.round(pr.x), Math.round(pr.y));
+      const a = assetOf(it);
+      ctx.save();
+      ctx.translate(it.cx, it.cy);
+      ctx.rotate(it.rot * Math.PI / 180);
+      ctx.drawImage(a.img, -it.w / 2, -it.h / 2, it.w, it.h);
+      ctx.restore();
+    });
+    const mime = state.fmt === 'png' ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(r => c.toBlob(r, mime, state.fmt === 'png' ? undefined : 0.92));
+    const base = state.bg.name.replace(/\.[^.]+$/, '') || '合成图';
+    const saved = await saveBlob(blob, base + '_合成.' + state.fmt);
+    if (saved === 'error') {
+      setStatus('保存失败：当前浏览器可能不支持指定文件夹，请改用“直接下载”', false);
+    } else if (saved === 'folder') {
+      setStatus('已保存 ' + state.bg.w + '×' + state.bg.h + ' ' + state.fmt.toUpperCase() + ' 合成图到文件夹（' + state.items.length + ' 个图层）', true);
+    } else if (saved === 'download') {
+      setStatus('已导出 ' + state.bg.w + '×' + state.bg.h + ' ' + state.fmt.toUpperCase() + '（' + state.items.length + ' 个图层）', true);
+    }
+  } finally {
+    ov.classList.remove('show');
+  }
+});
+
+/* ===== 初始化 ===== */
+bindItemDrag();
+bindShadowControls();
+syncShadowControls();
+renderAssets();   // 首次渲染素材区（空状态提示）
+updateHistBtns();
+setStatus('上传背景图开始 · 拖动智能对齐，Ctrl+A 全选，Ctrl+C/V 复制粘贴');
+</script>
+</body>
+</html>

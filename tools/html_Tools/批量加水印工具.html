@@ -335,7 +335,7 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
       </div>
       <span class="control-label">导出方式</span>
       <div class="seg" id="dlModeSeg">
-        <button class="active" data-dlmode="folder">存文件夹</button>
+        <button class="active" data-dlmode="folder">指定文件夹</button>
         <button data-dlmode="each">逐个下载</button>
       </div>
     </div>
@@ -354,7 +354,7 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
   </div>
   <div class="status" id="status"></div>
 
-  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 水印按每张图片自身短边占比 20% 计算，透明度 2%，平铺覆盖 · 导出方式：存文件夹（推荐）/ 逐个下载</footer>
+  <footer>纯浏览器端处理，图片不会上传到任何服务器 · 水印按每张图片自身短边占比 20% 计算，透明度 2%，平铺覆盖 · 导出方式：指定文件夹（推荐）/ 逐个下载</footer>
 </div>
 
 <div class="drop-overlay" id="dropOverlay">
@@ -569,7 +569,7 @@ clearBtn.addEventListener('click', () => {
 });
 
 /* ===== 导出方式切换 ===== */
-let dlMode = 'folder';   // folder=存文件夹 / each=逐个下载
+let dlMode = 'folder';   // folder=指定文件夹 / each=逐个下载
 const DL_MODE_BTN = {
   folder: document.querySelector('#dlModeSeg button[data-dlmode=folder]'),
   each: document.querySelector('#dlModeSeg button[data-dlmode=each]')
@@ -600,10 +600,10 @@ function baseName(it, ext) {
   return it.file.name.replace(/\.[^.]+$/, '') + '_水印.' + ext;
 }
 
-/* ===== 存文件夹模式（推荐：一次选目录，逐个写入，不经下载管理器） ===== */
+/* ===== 指定文件夹模式（推荐：一次选目录，逐个写入，不经下载管理器） ===== */
 async function exportToFolder(isPng, mime, ext) {
   if (!window.showDirectoryPicker) {
-    statusEl.textContent = '当前浏览器不支持存文件夹，请改用逐个下载';
+    statusEl.textContent = '当前浏览器不支持指定文件夹，请改用逐个下载';
     return;
   }
   let dir;

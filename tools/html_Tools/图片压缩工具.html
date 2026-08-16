@@ -87,6 +87,11 @@ h1 small{display:block;font-size:12px;font-weight:400;color:var(--text-muted);ma
 .result.fail .stat-num{color:var(--red)}
 .stat-sub{font-size:11px;color:var(--text-secondary);margin-top:3px}
 .download-wrap{margin-top:10px}
+.seg{display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:3px;gap:3px}
+.seg button{flex:0 0 auto;padding:8px 14px;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap}
+.seg button.active{background:#fff;color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.dl-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+.dl-label{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
 footer{text-align:center;margin-top:16px;font-size:11px;color:var(--text-muted)}
 .overlay{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;border-radius:var(--radius);background:rgba(255,255,255,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .overlay.show{display:flex}
@@ -145,6 +150,13 @@ body{padding:16px}
 </div>
 </div>
 <button class="btn btn-green" id="compressBtn" disabled>开始压缩</button>
+<div class="dl-row">
+<span class="dl-label">导出方式</span>
+<div class="seg" id="dlModeSeg">
+<button class="active" data-dlmode="folder">指定文件夹</button>
+<button data-dlmode="each">直接下载</button>
+</div>
+</div>
 <div class="result" id="result">
 <div class="result-grid">
 <div class="stat-box">
@@ -164,7 +176,7 @@ body{padding:16px}
 </div>
 </div>
 </div>
-<footer>纯浏览器端处理，图片不会上传到任何服务器</footer>
+<footer>纯浏览器端处理，图片不会上传到任何服务器 · 导出方式：指定文件夹（推荐）/ 直接下载</footer>
 <div class="overlay" id="overlay">
 <div class="overlay-inner">
 <div class="spinner"></div>
@@ -232,13 +244,13 @@ ss.addEventListener('input',upd);
 
 cb.addEventListener('click',async function(){
 this.disabled=true;card.classList.add('loading');overlay.classList.add('show');r.classList.remove('open');
-const kb=+ss.value,target=Math.min(kb*1024,orig-1),mt=file.type||'image/jpeg';
+const kb=+ss.value,target=Math.min(kb*1024,orig-1),mt='image/jpeg';
 const img=new Image();img.src=pv.src;await new Promise(r=>{img.onload=r});
 const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
-const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(img,0,0);
+const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);cx.drawImage(img,0,0);
 let best=null;
 for(let q=92;q>=6;q-=6){const b=await new Promise(r=>c.toBlob(r,mt,q/100));if(b&&b.size<=target){best={blob:b,scale:1};break}}
-if(!best){for(let s=.92;s>=.06;s-=.06){let w=Math.round(img.naturalWidth*s),h=Math.round(img.naturalHeight*s);let n=document.createElement('canvas');n.width=w;n.height=h;let nx=n.getContext('2d');nx.imageSmoothingQuality='high';nx.drawImage(img,0,0,w,h);for(let q=80;q>=6;q-=6){const b=await new Promise(r=>n.toBlob(r,mt,q/100));if(b&&b.size<=target){best={blob:b,scale:s};break}}if(best)break}}
+if(!best){for(let s=.92;s>=.06;s-=.06){let w=Math.round(img.naturalWidth*s),h=Math.round(img.naturalHeight*s);let n=document.createElement('canvas');n.width=w;n.height=h;let nx=n.getContext('2d');nx.imageSmoothingQuality='high';nx.fillStyle='#fff';nx.fillRect(0,0,w,h);nx.drawImage(img,0,0,w,h);for(let q=80;q>=6;q-=6){const b=await new Promise(r=>n.toBlob(r,mt,q/100));if(b&&b.size<=target){best={blob:b,scale:s};break}}if(best)break}}
 card.classList.remove('loading');overlay.classList.remove('show');
 if(best){
 blob=best.blob;r.className='result';
@@ -251,10 +263,39 @@ r.className='result fail';os.textContent=fmt(orig);cs.textContent='---';da.textC
 this.disabled=false;this.textContent='重新压缩';
 });
 
-db.addEventListener('click',()=>{
+/* ===== 导出方式切换：指定文件夹 / 直接下载 ===== */
+let dlMode='folder';
+const DL_MODE_BTN={folder:document.querySelector('#dlModeSeg button[data-dlmode=folder]'),each:document.querySelector('#dlModeSeg button[data-dlmode=each]')};
+Object.values(DL_MODE_BTN).forEach(b=>b.addEventListener('click',()=>{dlMode=b.dataset.dlmode;Object.values(DL_MODE_BTN).forEach(x=>x.classList.toggle('active',x===b))}));
+
+/* ===== 保存文件：指定文件夹（File System Access API，一次选目录直接写入）/ 直接下载 ===== */
+async function saveBlob(blob,name){
+if(dlMode==='folder'&&window.showDirectoryPicker){
+let dir;
+try{dir=await window.showDirectoryPicker()}catch(err){if(err&&err.name==='AbortError')return'cancel';alert('选择文件夹失败：'+err.message);return'error'}
+let n=name,seq=1;
+for(;;){
+try{await dir.getFileHandle(n);n=name.replace(/\.[^.]+$/,'')+'_'+(seq++)+'.'+name.split('.').pop()}catch{break}
+}
+try{
+const fh=await dir.getFileHandle(n,{create:true});
+const w=await fh.createWritable();
+await w.write(blob);
+await w.close();
+return 'folder';
+}catch(err){alert('保存失败：'+err.message);return'error'}
+}
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+return 'download';
+}
+
+db.addEventListener('click',async()=>{
 if(!blob)return;
-const e=file.name.replace(/^.*\./,''),n=file.name.replace(/\.[^.]+$/,'')+'_compressed.'+(e.match(/^(jpg|jpeg|png|webp)$/i)?e:'jpg');
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=n;a.click();
+const n=file.name.replace(/\.[^.]+$/,'')+'_compressed.jpg';
+const r2=await saveBlob(blob,n);
+if(r2==='folder'){
+const old=db.textContent;db.textContent='已保存到文件夹 ✓';setTimeout(()=>{db.textContent=old},2000);
+}
 });
 
 /* 全屏拖拽：页面任意位置拖入图片，延迟淡入模糊提示可松手 */
