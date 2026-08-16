@@ -1097,6 +1097,7 @@ function bindHandles(it) {
       // 鼠标位移投影到实例局部坐标轴（toStage 已返回原始坐标）
       const mx = m.x, my = m.y;
       const rad = start.rot * Math.PI / 180;
+      const c0 = Math.cos(rad), s0 = Math.sin(rad);
       const cosA = Math.cos(-rad), sinA = Math.sin(-rad);
       const vx = mx - start.mx, vy = my - start.my;
       const lx = vx * cosA - vy * sinA;   // 局部 x 位移
@@ -1104,14 +1105,11 @@ function bindHandles(it) {
       if (mode === 'corner') {
         const ex = start.anchor.e ? 1 : -1, ey = start.anchor.s ? 1 : -1;
         if (e.shiftKey) {
-          // 等比：按鼠标到对角锚点的距离比例（锚点=形状对角，世界坐标）
-          const rad0 = start.rot * Math.PI / 180;
-          const c0 = Math.cos(rad0), s0 = Math.sin(rad0);
-          const sx0 = start.anchor.e ? -1 : 1, sy0 = start.anchor.s ? -1 : 1;
-          const ax = start.cx + sx0 * (start.w / 2 * c0 - start.h / 2 * s0);
-          const ay = start.cy + sx0 * (start.w / 2 * s0 + start.h / 2 * c0);
+          // 等比：锚点 = 拖拽角的对角（世界坐标，旋转正确），按鼠标到锚点的距离比例缩放
+          const ax = start.cx - ex * start.w / 2 * c0 + ey * start.h / 2 * s0;
+          const ay = start.cy - ex * start.w / 2 * s0 - ey * start.h / 2 * c0;
           const d0 = Math.hypot(start.w, start.h) || 1;
-          const d1 = Math.hypot(m.x - ax, m.y - ay);
+          const d1 = Math.hypot(mx - ax, my - ay);
           const k = Math.max(0.02, d1 / d0);
           it.w = Math.max(4, Math.round(start.w * k));
           it.h = Math.max(4, Math.round(start.h * k));
@@ -1126,19 +1124,21 @@ function bindHandles(it) {
         it.w = Math.max(4, Math.round(start.w + (start.anchor.e ? lx : -lx)));
         it.h = e.shiftKey ? Math.max(4, Math.round(it.w * start.h / start.w)) : start.h;
       }
-      // 锚点不动：中心修正
+      // 锚点（对角或对边）固定：按新尺寸反推中心，再旋转回世界坐标
       const dwL = (it.w - start.w) / 2, dhL = (it.h - start.h) / 2;
-      const c0 = Math.cos(start.rot * Math.PI / 180), s0 = Math.sin(start.rot * Math.PI / 180);
       if (mode === 'corner') {
-        // 角手柄：对角固定 → 中心 = 锚点与鼠标的中点 → 修正 = 鼠标位移的一半（任意旋转角度成立）
-        it.cx = start.cx + vx / 2;
-        it.cy = start.cy + vy / 2;
+        // 角手柄：中心修正 = R(rot)·(ex*dwL, ey*dhL)（旋转时对角依然纹丝不动）
+        const ex = start.anchor.e ? 1 : -1, ey = start.anchor.s ? 1 : -1;
+        it.cx = start.cx + ex * dwL * c0 - ey * dhL * s0;
+        it.cy = start.cy + ex * dwL * s0 + ey * dhL * c0;
+      } else if (mode === 'v') {
+        const sg = start.anchor.s ? 1 : -1;   // 's' 手柄：对边（上）固定，中心沿 +局部y 移动
+        it.cx = start.cx - sg * dhL * s0;
+        it.cy = start.cy + sg * dhL * c0;
       } else {
-        // 边手柄：中心沿局部轴修正（旋转回世界坐标）
-        const cdx = dwL * c0 - dhL * s0;
-        const cdy = dwL * s0 + dhL * c0;
-        it.cx = start.cx + (start.anchor.e ? cdx : -cdx);
-        it.cy = start.cy + (start.anchor.s ? cdy : -cdy);
+        const sg = start.anchor.e ? 1 : -1;   // 'e' 手柄：对边（左）固定，中心沿 +局部x 移动
+        it.cx = start.cx + sg * dwL * c0;
+        it.cy = start.cy + sg * dwL * s0;
       }
       layoutItems();
       renderSelectionUi();
@@ -1206,23 +1206,23 @@ function bindItemDrag() {
     const startPos = {};
     state.items.forEach(x => { if (state.sel.has(x.id)) startPos[x.id] = { cx: x.cx, cy: x.cy }; });
     const startMouse = { x: e.clientX, y: e.clientY };
-    const snapAcc = {};   // 吸附累积：位置 = 鼠标基准位移 + 累积吸附量（避免每帧回弹抽搐）
+    const snapHold = {};   // 吸附记忆：itemId → { v:[线,线,线], h:[线,线,线] }，仅用于防边界抖动，脱离即释放
     let moved = false;
     function onMove(ev) {
       const dx = (ev.clientX - startMouse.x) / scale;
       const dy = (ev.clientY - startMouse.y) / scale;
       moved = moved || Math.abs(dx) > 0.2 || Math.abs(dy) > 0.2;
       if (!moved) return;
+      // 基准位置 = 抓取点 + 鼠标位移：完全跟手（不残留任何吸附偏移）
       state.items.forEach(x => {
         if (state.sel.has(x.id)) {
-          const a = snapAcc[x.id] || { x: 0, y: 0 };
-          x.cx = startPos[x.id].cx + dx + a.x;
-          x.cy = startPos[x.id].cy + dy + a.y;
+          x.cx = startPos[x.id].cx + dx;
+          x.cy = startPos[x.id].cy + dy;
         }
       });
-      updateGuides(snapAcc);   // 吸附修正写入累积
-      layoutItems();           // 再按修正后的坐标摆放
-      renderSelectionUi();     // 选中框跟随主体
+      updateGuides(snapHold);   // 临时吸附：仅本帧生效，一旦脱离立即回到鼠标位置
+      layoutItems();            // 再按修正后的坐标摆放
+      renderSelectionUi();      // 选中框跟随主体
     }
     function onUp() {
       document.removeEventListener('mousemove', onMove);
@@ -1234,12 +1234,15 @@ function bindItemDrag() {
   });
 }
 
-/* 对齐参考线 */
-const SNAP_PX = 5;   // 预览像素阈值
-function updateGuides(snapAcc) {
+/* 对齐参考线：临时吸附 —— 每帧基于"抓取点+鼠标位移"重算，吸附只在本帧生效；
+   吸附后记住所贴的线，离开其 2 倍阈值才放手并回到鼠标位置，绝不残留偏移 */
+const SNAP_PX = 3;        // 吸附阈值（预览像素）：足够接近边缘才吸附
+const SNAP_RELEASE = 1.5;   // 释放倍数：离开吸附线 1.5 倍阈值即放手（防止边界抖动，又不粘手）
+function updateGuides(hold) {
   if (!state.bg) return;
   const s = scale;
   const tol = SNAP_PX / s;
+  const rel = SNAP_RELEASE * tol;
   const vLines = [], hLines = [];
   const others = state.items.filter(x => !state.sel.has(x.id));
   others.forEach(x => {
@@ -1251,29 +1254,41 @@ function updateGuides(snapAcc) {
   const showV = [], showH = [];
   state.items.forEach(x => {
     if (!state.sel.has(x.id)) return;
+    const hd = hold[x.id] || (hold[x.id] = { v: [null, null, null], h: [null, null, null] });
     const vv = [x.cx - x.w / 2, x.cx, x.cx + x.w / 2];
     const hh = [x.cy - x.h / 2, x.cy, x.cy + x.h / 2];
-    vv.forEach(v => {
-      let best = null, bd = tol;
-      vLines.forEach(r => { const d = Math.abs(v - r); if (d < bd) { bd = d; best = r; } });
-      if (best !== null) {
-        const delta = best - v;
-        x.cx += delta;
-        const a = snapAcc[x.id] || (snapAcc[x.id] = { x: 0, y: 0 });
-        a.x += delta;      // 累积吸附量，后续 mousemove 不再回弹
-        showV.push(best);
+    // 垂直方向：左/中/右三条线各自尝试吸附
+    vv.forEach((v, i) => {
+      let target = null;
+      // 还贴着的线在释放范围内 → 继续保持，避免边界来回抖动
+      if (hd.v[i] !== null && Math.abs(v - hd.v[i]) < rel) {
+        target = hd.v[i];
+      } else {
+        let best = null, bd = tol;
+        vLines.forEach(r => { const d = Math.abs(v - r); if (d < bd) { bd = d; best = r; } });
+        if (best !== null) target = best;
       }
+      if (target !== null) {
+        hd.v[i] = target;
+        x.cx += target - v;   // 临时修正：仅本帧
+        showV.push(target);
+      } else hd.v[i] = null;
     });
-    hh.forEach(h => {
-      let best = null, bd = tol;
-      hLines.forEach(r => { const d = Math.abs(h - r); if (d < bd) { bd = d; best = r; } });
-      if (best !== null) {
-        const delta = best - h;
-        x.cy += delta;
-        const a = snapAcc[x.id] || (snapAcc[x.id] = { x: 0, y: 0 });
-        a.y += delta;
-        showH.push(best);
+    // 水平方向同理
+    hh.forEach((h, i) => {
+      let target = null;
+      if (hd.h[i] !== null && Math.abs(h - hd.h[i]) < rel) {
+        target = hd.h[i];
+      } else {
+        let best = null, bd = tol;
+        hLines.forEach(r => { const d = Math.abs(h - r); if (d < bd) { bd = d; best = r; } });
+        if (best !== null) target = best;
       }
+      if (target !== null) {
+        hd.h[i] = target;
+        x.cy += target - h;
+        showH.push(target);
+      } else hd.h[i] = null;
     });
   });
   if (showV.length) {
