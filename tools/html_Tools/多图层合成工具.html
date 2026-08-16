@@ -85,9 +85,8 @@ h1 small {
   overflow-y: auto;
   padding-right: 4px;
 }
-/* 面板禁止被压缩：素材区（assets-bar）是唯一允许伸缩吸收多余高度的区域 */
+/* 面板全部禁止压缩：素材区固定高度、素材多了内部滚动，不挤压其他面板；右栏超高时整体滚动 */
 .right-col > * { flex-shrink: 0; }
-.right-col > .assets-bar { flex-shrink: 1; }
 
 /* ===== 左栏：预览舞台 ===== */
 .stage-box {
@@ -285,7 +284,8 @@ h1 small {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  flex: 1;
+  flex: 0 0 auto;
+  height: 104px;              /* 固定高度（约 1.5 行缩略图）：素材多了内部滚动，不挤压其他面板 */
   min-height: 0;
   padding: 6px;
   border: 2px dashed var(--border);
@@ -453,6 +453,11 @@ h1 small {
 .seg button.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 
 .control-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* 导出区：格式 / 方式 / 导出按钮 一行排开（按钮贴右） */
+.export-row { justify-content: flex-start; gap: 8px; }
+.export-row .seg { flex: 0 0 auto; }
+.export-row .seg button { padding: 4px 8px; font-size: 11px; white-space: nowrap; }
+.export-row #exportBtn { flex: 0 0 auto; width: auto; padding: 6px 12px; margin-left: auto; }
 .control-label { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
 
 /* 按钮 */
@@ -672,25 +677,21 @@ footer kbd {
         </div>
       </div>
 
-      <!-- 导出 -->
-      <div class="control-row">
-        <span class="control-label">导出格式</span>
-        <div class="seg" style="width:180px" id="fmtSeg">
+      <!-- 导出：格式 / 方式 / 按钮 一行排开 -->
+      <div class="control-row export-row">
+        <div class="seg" id="fmtSeg" title="导出格式">
           <button data-fmt="jpg" class="active">JPG</button>
           <button data-fmt="png">PNG</button>
         </div>
-      </div>
-      <div class="control-row">
-        <span class="control-label">导出方式</span>
-        <div class="seg" id="dlModeSeg">
+        <div class="seg" id="dlModeSeg" title="导出方式">
           <button class="active" data-dlmode="folder">指定文件夹</button>
           <button data-dlmode="each">直接下载</button>
         </div>
+        <button class="btn btn-green" id="exportBtn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          导出合成图
+        </button>
       </div>
-      <button class="btn btn-green" id="exportBtn" disabled>
-        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-        导出合成图
-      </button>
     </div>
   </div>
 
@@ -872,6 +873,7 @@ function assetOf(it) { return state.assets.find(a => a.id === it.assetId); }
 function renderAll() {
   // 清空舞台上的旧层
   stage.querySelectorAll('.item, .proj, .sel-box, .handle, .rot-handle, .rot-line').forEach(el => el.remove());
+  itemEls.clear(); projEls.clear();   // DOM 缓存随舞台一起重建（结构变化时）
   hideGuides();
   if (!state.bg) { renderSelectionUi(); return; }
   layoutItems();
@@ -880,12 +882,16 @@ function renderAll() {
   updateCount();
 }
 
+/* 主体/投影 DOM 缓存：拖拽期间每帧复用元素，避免 querySelector 全表扫描。
+   结构变化（增删/撤销/重做/清空）时由 renderAll() 清空重建。 */
+const itemEls = new Map();    // itemId → 主体元素
+const projEls = new Map();    // itemId → 投影元素
+
 function layoutItems() {
   if (!state.bg) return;
   const s = scale;
-  state.items.forEach(it => {
-    const zi = state.items.indexOf(it);
-    let el = stage.querySelector('.item[data-id="' + it.id + '"]');
+  state.items.forEach((it, zi) => {
+    let el = itemEls.get(it.id);
     if (!el) {
       const a = assetOf(it);
       el = document.createElement('div');
@@ -894,6 +900,7 @@ function layoutItems() {
       el.innerHTML = '<img src="' + a.img.src + '" alt=""><div class="item-frame"></div>';
       el.style.zIndex = 20 + zi * 2;          // 主体
       stage.appendChild(el);
+      itemEls.set(it.id, el);
     }
     const w = it.w * s, h = it.h * s;
     el.style.left = (it.cx - it.w / 2) * s + 'px';
@@ -902,13 +909,14 @@ function layoutItems() {
     el.style.height = h + 'px';
     el.style.transform = 'rotate(' + it.rot + 'deg)';
     // 投影：独立层，z-index 比同一实例的主体低 1，且高于前一实例的主体
-    let proj = stage.querySelector('.proj[data-id="' + it.id + '"]');
+    let proj = projEls.get(it.id);
     if (!proj) {
       proj = document.createElement('div');
       proj.className = 'proj';
       proj.dataset.id = it.id;
       proj.style.zIndex = 19 + zi * 2;        // 投影（主体之下）
       stage.appendChild(proj);
+      projEls.set(it.id, proj);
     }
     const pr = makeShadow(it, s);
     if (pr) {
@@ -1210,102 +1218,199 @@ function bindItemDrag() {
       state.sel.add(it.id);
       renderSelectionUi(); updateItemPanel();
     }
-    const startPos = {};
-    state.items.forEach(x => { if (state.sel.has(x.id)) startPos[x.id] = { cx: x.cx, cy: x.cy }; });
-    const startMouse = { x: e.clientX, y: e.clientY };
-    const snapHold = {};   // 吸附记忆：itemId → { v:[线,线,线], h:[线,线,线] }，仅用于防边界抖动，脱离即释放
-    let moved = false;
-    function onMove(ev) {
-      const dx = (ev.clientX - startMouse.x) / scale;
-      const dy = (ev.clientY - startMouse.y) / scale;
-      moved = moved || Math.abs(dx) > 0.2 || Math.abs(dy) > 0.2;
-      if (!moved) return;
-      // 基准位置 = 抓取点 + 鼠标位移：完全跟手（不残留任何吸附偏移）
-      state.items.forEach(x => {
-        if (state.sel.has(x.id)) {
-          x.cx = startPos[x.id].cx + dx;
-          x.cy = startPos[x.id].cy + dy;
-        }
-      });
-      updateGuides(snapHold);   // 临时吸附：仅本帧生效，一旦脱离立即回到鼠标位置
-      layoutItems();            // 再按修正后的坐标摆放
-      renderSelectionUi();      // 选中框跟随主体
-    }
-    function onUp() {
-      document.removeEventListener('mousemove', onMove);
-      hideGuides();
-      if (moved) { pushHistory(); }
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp, { once: true });
+    startDragSession(e);   // 命中主体 → 开启拖拽会话
   });
 }
 
-/* 对齐参考线：临时吸附 —— 每帧基于"抓取点+鼠标位移"重算，吸附只在本帧生效；
-   吸附后记住所贴的线，离开其 2 倍阈值才放手并回到鼠标位置，绝不残留偏移 */
-const SNAP_PX = 3;        // 吸附阈值（预览像素）：足够接近边缘才吸附
-const SNAP_RELEASE = 1.5;   // 释放倍数：离开吸附线 1.5 倍阈值即放手（防止边界抖动，又不粘手）
-function updateGuides(hold) {
-  if (!state.bg) return;
-  const s = scale;
-  const tol = SNAP_PX / s;
-  const rel = SNAP_RELEASE * tol;
-  const vLines = [], hLines = [];
-  const others = state.items.filter(x => !state.sel.has(x.id));
-  others.forEach(x => {
-    vLines.push(x.cx - x.w / 2, x.cx, x.cx + x.w / 2);
-    hLines.push(x.cy - x.h / 2, x.cy, x.cy + x.h / 2);
-  });
-  vLines.push(0, state.bg.w / 2, state.bg.w);
-  hLines.push(0, state.bg.h / 2, state.bg.h);
-  const showV = [], showH = [];
-  state.items.forEach(x => {
-    if (!state.sel.has(x.id)) return;
-    const hd = hold[x.id] || (hold[x.id] = { v: [null, null, null], h: [null, null, null] });
-    const vv = [x.cx - x.w / 2, x.cx, x.cx + x.w / 2];
-    const hh = [x.cy - x.h / 2, x.cy, x.cy + x.h / 2];
-    // 垂直方向：左/中/右三条线各自尝试吸附
-    vv.forEach((v, i) => {
-      let target = null;
-      // 还贴着的线在释放范围内 → 继续保持，避免边界来回抖动
-      if (hd.v[i] !== null && Math.abs(v - hd.v[i]) < rel) {
-        target = hd.v[i];
-      } else {
-        let best = null, bd = tol;
-        vLines.forEach(r => { const d = Math.abs(v - r); if (d < bd) { bd = d; best = r; } });
-        if (best !== null) target = best;
-      }
+/* =====================================================================
+ * 拖拽会话（startDragSession）
+ *  - 事件节流：mousemove 只记录最新指针位置，由 requestAnimationFrame
+ *    合帧渲染 —— 每帧至多一次布局，指针再快也不掉帧、不抖动；
+ *  - 滞回吸附：每帧由 SnapEngine 重算，吸附只修正本帧，脱离即回到鼠标位置；
+ *  - 安全收尾：mouseup 与窗口失焦都会结束会话（防拖拽卡死），
+ *    会话带 ended 标志，重复收尾只生效一次；收尾前补渲一帧保证最终位置正确。
+ * ===================================================================== */
+const MOVE_IGNORE_PX = 0.2;   // 位移小于此值视为误触，不产生拖拽
+
+function startDragSession(e) {
+  const startPos = new Map();   // itemId → { it, cx, cy }（拖拽起始，位移基准）
+  for (const x of state.items) {
+    if (state.sel.has(x.id)) startPos.set(x.id, { it: x, cx: x.cx, cy: x.cy });
+  }
+  const session = {
+    startMouse: { x: e.clientX, y: e.clientY },
+    pointer: { x: e.clientX, y: e.clientY },   // 最新指针位置（rAF 合帧消费）
+    snapHold: {},                              // 吸附记忆：itemId → { v:[线×3], h:[线×3] }，脱离即释放
+    moved: false,
+    rafId: 0,
+    ended: false,
+  };
+
+  /** 渲染一帧：基准位移 → 滞回吸附 → 摆放与选中框 */
+  function renderFrame() {
+    session.rafId = 0;
+    const dx = (session.pointer.x - session.startMouse.x) / scale;
+    const dy = (session.pointer.y - session.startMouse.y) / scale;
+    if (Math.abs(dx) > MOVE_IGNORE_PX || Math.abs(dy) > MOVE_IGNORE_PX) session.moved = true;
+    if (!session.moved) return;                // 微动忽略，避免误触
+    // 1) 基准位置 = 起始位置 + 鼠标位移：完全跟手（不残留任何吸附偏移）
+    for (const { it, cx, cy } of startPos.values()) {
+      it.cx = cx + dx;
+      it.cy = cy + dy;
+    }
+    // 2) 滞回吸附：只修正本帧，脱离即回到鼠标位置
+    const { moves, guideV: vLine, guideH: hLine } =
+      SnapEngine.compute(state.items, state.sel, state.bg, session.snapHold, scale);
+    for (const m of moves) {
+      m.it.cx += m.dx;
+      m.it.cy += m.dy;
+    }
+    showGuides(vLine, hLine);
+    layoutItems();            // 摆放主体与投影
+    renderSelectionUi();      // 选中框跟随主体
+  }
+
+  function scheduleRender() {
+    if (!session.rafId && !session.ended) session.rafId = requestAnimationFrame(renderFrame);
+  }
+
+  /** 会话收尾：取消挂起帧 → 补渲最终位置 → 解绑事件 → 入历史 */
+  function endSession() {
+    if (session.ended) return;                 // 防重复收尾（重复 mouseup / 失焦）
+    session.ended = true;
+    if (session.rafId) {
+      cancelAnimationFrame(session.rafId);
+      session.rafId = 0;
+      renderFrame();                           // 收尾帧：确保最终位置已渲染
+    }
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    window.removeEventListener('blur', onBlur);
+    hideGuides();
+    if (session.moved) pushHistory();          // 真实拖动才入历史
+  }
+
+  const onMove = ev => { session.pointer.x = ev.clientX; session.pointer.y = ev.clientY; scheduleRender(); };
+  const onUp = () => endSession();
+  const onBlur = () => endSession();           // 窗口失焦兜底：防止拖拽状态卡死
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  window.addEventListener('blur', onBlur);
+}
+
+/* =====================================================================
+ * 吸附系统（SnapEngine）
+ *  - 纯逻辑模块，不直接操作 DOM，可独立单测、便于后续扩展参考线规则；
+ *  - 滞回吸附：吸附后记住所贴的线，鼠标离开 releaseFactor×阈值 才放手，
+ *    避免边界来回抖动；
+ *  - 单轴唯一修正：左/中/右三条边各自找候选线（记忆线优先），但整轴只
+ *    执行误差最小的一条 —— 多近邻吸附线时不会三边叠加漂移、不会来回抢线。
+ * ===================================================================== */
+const SnapEngine = (() => {
+  /** 吸附参数（预览像素） */
+  const CONFIG = {
+    thresholdPx: 3,        // 吸附阈值：边缘距参考线小于此值即吸附
+    releaseFactor: 1.5,    // 滞回释放倍数：离开吸附线 thresholdPx×releaseFactor 才放手
+  };
+
+  /**
+   * 收集参考线：未选中项的左/中/右三边 + 画布 左/中/右、上/中/下。
+   * 选中项自身不产生参考线（避免自吸），含非法数值的项直接跳过（安全兜底）。
+   */
+  function collectLines(items, sel, bounds) {
+    const v = [], h = [];
+    for (const it of items) {
+      if (sel.has(it.id)) continue;
+      if (!Number.isFinite(it.cx) || !Number.isFinite(it.cy) ||
+          !Number.isFinite(it.w) || !Number.isFinite(it.h)) continue;
+      v.push(it.cx - it.w / 2, it.cx, it.cx + it.w / 2);
+      h.push(it.cy - it.h / 2, it.cy, it.cy + it.h / 2);
+    }
+    v.push(0, bounds.w / 2, bounds.w);
+    h.push(0, bounds.h / 2, bounds.h);
+    return { v, h };
+  }
+
+  /** 在 lines 中找离 v 最近且距离小于 tol 的线；无则返回 null */
+  function nearestLine(v, lines, tol) {
+    let best = null, bestDist = tol;
+    for (const r of lines) {
+      const d = Math.abs(v - r);
+      if (d < bestDist) { bestDist = d; best = r; }
+    }
+    return best;
+  }
+
+  /**
+   * 单轴决策：每条边先取候选线（记忆线在滞回带内优先保持），
+   * 整轴只返回误差最小的一条修正 { edge, target }；无可吸附线返回 null。
+   */
+  function decideAxis(edgePos, lines, hold, tol, rel) {
+    let best = null, bestDist = Infinity;
+    for (let i = 0; i < edgePos.length; i++) {
+      const v = edgePos[i];
+      const target = (hold[i] !== null && Math.abs(v - hold[i]) < rel)
+        ? hold[i]                          // 滞回：还在释放带内 → 保持原线
+        : nearestLine(v, lines, tol);      // 否则就近重吸附
+      hold[i] = target;                    // 记忆随帧更新
       if (target !== null) {
-        hd.v[i] = target;
-        x.cx += target - v;   // 临时修正：仅本帧
-        showV.push(target);
-      } else hd.v[i] = null;
-    });
-    // 水平方向同理
-    hh.forEach((h, i) => {
-      let target = null;
-      if (hd.h[i] !== null && Math.abs(h - hd.h[i]) < rel) {
-        target = hd.h[i];
-      } else {
-        let best = null, bd = tol;
-        hLines.forEach(r => { const d = Math.abs(h - r); if (d < bd) { bd = d; best = r; } });
-        if (best !== null) target = best;
+        const d = Math.abs(target - v);
+        if (d < bestDist) { bestDist = d; best = { edge: v, target: target }; }
       }
-      if (target !== null) {
-        hd.h[i] = target;
-        x.cy += target - h;
-        showH.push(target);
-      } else hd.h[i] = null;
-    });
-  });
-  if (showV.length) {
+    }
+    return best;
+  }
+
+  /**
+   * 计算本帧吸附修正（纯函数，不写 DOM）。
+   * @param {Array}  items       全部主体（须与 DOM 层共享同一对象引用）
+   * @param {Set}    sel         选中的 item id
+   * @param {{w:number,h:number}} bounds 画布尺寸（原始坐标）
+   * @param {Object} hold        吸附记忆（拖拽会话内持久，脱离即清）
+   * @param {number} scaleFactor 预览缩放：原始坐标 → 预览像素
+   * @returns {{moves:Array<{it,dx,dy}>, guideV:number|null, guideH:number|null}}
+   */
+  function compute(items, sel, bounds, hold, scaleFactor) {
+    if (!bounds || !(scaleFactor > 0)) return { moves: [], guideV: null, guideH: null };
+    const tol = CONFIG.thresholdPx / scaleFactor;
+    const rel = CONFIG.releaseFactor * tol;
+    const lines = collectLines(items, sel, bounds);
+    const moves = [];
+    let guideV = null, guideH = null;
+    for (const it of items) {
+      if (!sel.has(it.id)) continue;
+      const mem = hold[it.id] || (hold[it.id] = { v: [null, null, null], h: [null, null, null] });
+      const vv = [it.cx - it.w / 2, it.cx, it.cx + it.w / 2];
+      const hh = [it.cy - it.h / 2, it.cy, it.cy + it.h / 2];
+      const bv = decideAxis(vv, lines.v, mem.v, tol, rel);
+      const bh = decideAxis(hh, lines.h, mem.h, tol, rel);
+      if (bv || bh) {
+        moves.push({ it: it, dx: bv ? bv.target - bv.edge : 0, dy: bh ? bh.target - bh.edge : 0 });
+        if (bv && guideV === null) guideV = bv.target;
+        if (bh && guideH === null) guideH = bh.target;
+      }
+    }
+    return { moves: moves, guideV: guideV, guideH: guideH };
+  }
+
+  return { compute: compute, CONFIG: CONFIG };
+})();
+
+/** 显示/隐藏对齐参考线（输入为原始坐标，内部换算预览像素） */
+function showGuides(vLine, hLine) {
+  if (vLine !== null && vLine !== undefined) {
     guideV.style.display = 'block';
-    guideV.style.left = (showV[0] * s + stage.offsetLeft) + 'px';
-  } else guideV.style.display = 'none';
-  if (showH.length) {
+    guideV.style.left = (vLine * scale + stage.offsetLeft) + 'px';
+  } else {
+    guideV.style.display = 'none';
+  }
+  if (hLine !== null && hLine !== undefined) {
     guideH.style.display = 'block';
-    guideH.style.top = (showH[0] * s + stage.offsetTop) + 'px';
-  } else guideH.style.display = 'none';
+    guideH.style.top = (hLine * scale + stage.offsetTop) + 'px';
+  } else {
+    guideH.style.display = 'none';
+  }
 }
 function hideGuides() { guideV.style.display = 'none'; guideH.style.display = 'none'; }
 
