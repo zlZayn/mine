@@ -92,6 +92,32 @@ h1 small {
 .upload-text { color: var(--text-secondary); font-size: 13px; line-height: 1.6; position: relative; }
 .upload-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; position: relative; }
 
+/* 上传后收缩为紧凑横条（与其他工具统一） */
+.upload-zone.has-image {
+  padding: 10px 16px;
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.upload-zone.has-image .upload-icon { width: 22px; height: 22px; margin-bottom: 0; flex-shrink: 0; }
+.upload-zone.has-image .upload-text,
+.upload-zone.has-image .upload-sub { display: none; }
+.upload-zone.has-image .compact-hint { display: flex; }
+.compact-hint {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  position: relative;
+  line-height: 1.5;
+}
+.compact-hint b { color: var(--primary); font-size: 13px; }
+
 /* ===== 图片网格 ===== */
 .count { margin-top: 16px; font-size: 12px; color: var(--text-secondary); }
 .img-grid {
@@ -245,6 +271,59 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
 .drop-overlay-icon { width: 44px; height: 44px; fill: none; stroke: var(--primary); stroke-width: 1.5; }
 .drop-overlay-text { font-size: 18px; font-weight: 700; color: var(--primary); }
 .drop-overlay-sub { font-size: 13px; color: var(--text-secondary); }
+
+/* ===== 全屏模糊进度遮罩 ===== */
+.progress-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.4);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility .3s ease;
+}
+.progress-overlay.show { opacity: 1; visibility: visible; }
+.progress-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 34px 52px;
+  box-shadow: var(--shadow);
+  min-width: 300px;
+}
+.progress-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: progressSpin .7s linear infinite;
+}
+@keyframes progressSpin { to { transform: rotate(360deg); } }
+.progress-text { font-size: 15px; font-weight: 600; color: var(--text); }
+.progress-bar {
+  width: 260px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #7c6cf0);
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+.progress-pct { font-size: 12px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -256,6 +335,7 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
     <svg class="upload-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div class="upload-text">点击或拖拽图片到此处（可多选）</div>
     <div class="upload-sub">支持 PNG / JPG / WebP，页面任意位置拖入也可</div>
+    <div class="compact-hint"><b id="hintCount">0</b> 张已导入，点击或拖拽可继续添加</div>
   </div>
 
   <div class="count" id="count">已导入 0 张</div>
@@ -300,6 +380,16 @@ footer { text-align: center; margin-top: 18px; font-size: 11px; color: var(--tex
   </div>
 </div>
 
+<!-- 全屏模糊进度遮罩 -->
+<div class="progress-overlay" id="progressOverlay">
+  <div class="progress-box">
+    <div class="progress-spinner"></div>
+    <div class="progress-text" id="progressText">正在导出...</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-pct" id="progressPct">0%</div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -334,6 +424,8 @@ function addFiles(fileList) {
 
 function render() {
   count.textContent = '已导入 ' + items.length + ' 张';
+  dz.classList.toggle('has-image', items.length > 0);
+  $('hintCount').textContent = items.length;
   exportBtn.disabled = items.length === 0;
   clearBtn.disabled = items.length === 0;
   grid.innerHTML = '';
@@ -434,6 +526,28 @@ Object.values(DL_MODE_BTN).forEach(b => b.addEventListener('click', () => {
   Object.values(DL_MODE_BTN).forEach(x => x.classList.toggle('active', x === b));
 }));
 
+/* ===== 全屏模糊进度遮罩 ===== */
+const progressOverlay = $('progressOverlay');
+const progressText = $('progressText');
+const progressFill = $('progressFill');
+const progressPct = $('progressPct');
+
+function showProgress(label) {
+  progressText.textContent = label;
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressOverlay.classList.add('show');
+}
+function updateProgress(done, total) {
+  const pct = Math.min(100, Math.round(done / total * 100));
+  progressText.textContent = '正在处理 ' + done + '/' + total;
+  progressFill.style.width = pct + '%';
+  progressPct.textContent = pct + '%';
+}
+function hideProgress() {
+  progressOverlay.classList.remove('show');
+}
+
 /* ===== 单张绘制（白底）→ Blob ===== */
 async function renderBlob(it, mime, isPng) {
   // 画布与商品放置
@@ -481,8 +595,10 @@ async function exportToFolder(isPng, mime, ext) {
     return;
   }
   let done = 0;
+  showProgress('正在保存...');
   for (const it of items) {
     statusEl.textContent = '正在保存 ' + (done + 1) + '/' + items.length + ' ...';
+    updateProgress(done + 1, items.length);
     const blob = await renderBlob(it, mime, isPng);
     // 同名自动加序号，避免覆盖
     let name = baseName(it, ext);
@@ -508,8 +624,10 @@ async function exportToFolder(isPng, mime, ext) {
 async function exportEach(isPng, mime, ext) {
   let done = 0;
   const pendingUrls = [];
+  showProgress('正在导出...');
   for (const it of items) {
     statusEl.textContent = '正在导出 ' + (done + 1) + '/' + items.length + ' ...';
+    updateProgress(done + 1, items.length);
     const blob = await renderBlob(it, mime, isPng);
     const url = URL.createObjectURL(blob);
     pendingUrls.push(url);
@@ -541,10 +659,14 @@ exportBtn.addEventListener('click', async () => {
   clearBtn.disabled = true;
   statusEl.className = 'status';
   let done;
-  if (useFolder) {
-    done = await exportToFolder(isPng, mime, ext);
-  } else {
-    done = await exportEach(isPng, mime, ext);
+  try {
+    if (useFolder) {
+      done = await exportToFolder(isPng, mime, ext);
+    } else {
+      done = await exportEach(isPng, mime, ext);
+    }
+  } finally {
+    hideProgress();
   }
   if (done === undefined) {   // 用户取消选目录等
     exportBtn.disabled = false;
