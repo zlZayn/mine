@@ -696,23 +696,25 @@ function applyTone(data, h, w, s) {
   }
 }
 
-/* 可分离盒式模糊（滑动窗口，仅 RGB，alpha 原样保留）— 锐化的基础 */
+/* 盒式模糊（直接邻域求和，clamp 边界，仅 RGB，alpha 原样保留）— 锐化的基础 */
 function blurPass(src, w, h, horizontal, r) {
   const out = new Uint8ClampedArray(src.length);
-  const n = horizontal ? w : h, m = horizontal ? h : w;
-  for (let line = 0; line < m; line++) {
-    let sumR = 0, sumG = 0, sumB = 0, cnt = 0;
-    for (let p = 0; p < n; p++) {
-      if (p - r - 1 >= 0) {
-        const i = horizontal ? (line * w + (p - r - 1)) * 4 : ((p - r - 1) * w + line) * 4;
-        sumR -= src[i]; sumG -= src[i + 1]; sumB -= src[i + 2]; cnt--;
+  const size = 2 * r + 1;
+  const half = r;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sumR = 0, sumG = 0, sumB = 0;
+      for (let d = -half; d <= half; d++) {
+        let px = x, py = y;
+        if (horizontal) px = x + d; else py = y + d;
+        if (px < 0) px = 0; else if (px >= w) px = w - 1;
+        if (py < 0) py = 0; else if (py >= h) py = h - 1;
+        const idx = (py * w + px) * 4;
+        sumR += src[idx]; sumG += src[idx + 1]; sumB += src[idx + 2];
       }
-      if (p + r < n) {
-        const i = horizontal ? (line * w + (p + r)) * 4 : ((p + r) * w + line) * 4;
-        sumR += src[i]; sumG += src[i + 1]; sumB += src[i + 2]; cnt++;
-      }
-      const o = horizontal ? (line * w + p) * 4 : (p * w + line) * 4;
-      out[o] = sumR / cnt; out[o + 1] = sumG / cnt; out[o + 2] = sumB / cnt; out[o + 3] = src[o + 3];
+      const o = (y * w + x) * 4;
+      out[o] = sumR / size; out[o + 1] = sumG / size; out[o + 2] = sumB / size;
+      out[o + 3] = src[o + 3];
     }
   }
   return out;
