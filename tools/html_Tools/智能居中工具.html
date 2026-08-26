@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>智能居中工具</title>
+    <style>
+        /* ===== 与批量白底工具完全一致的变量 ===== */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #eef2ff;
+            --green: #059669;
+            --green-hover: #047857;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border: #e5e7eb;
+            --bg: #f3f4f6;
+            --card-bg: #fff;
+            --shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 6px 16px rgba(0, 0, 0, .04);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px;
+            font-family: var(--font);
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            width: 100%;
+            max-width: 1120px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        h1 small {
+            display: block;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ===== 主区域：两栏布局 ===== */
+        .main-area {
+            display: flex;
+            gap: 20px;
+            margin-top: 16px;
+            align-items: flex-start;
+        }
+
+        /* ---- 左栏：正方形预览（缩小比例） ---- */
+        .preview-wrap {
+            flex: 0 0 52%;
+            min-width: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background:
+                repeating-conic-gradient(#f1f3f5 0 25%, #fff 0 50%) 0 0 / 18px 18px;
+        }
+        .preview-wrap canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .preview-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            background: rgba(255, 255, 255, .7);
+            pointer-events: none;
+        }
+        .preview-empty svg {
+            width: 36px;
+            height: 36px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 1.5;
+            margin-bottom: 8px;
+        }
+
+        /* ---- 右栏：上传区 + 缩略图 + 参数 ---- */
+        .right-col {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 440px;
+        }
+
+        /* 上传区（紧凑横条） */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            text-align: left;
+            cursor: pointer;
+            transition: all .2s;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--primary-light), transparent 60%);
+            opacity: 0;
+            transition: opacity .2s;
+        }
+        .upload-zone:hover::before,
+        .upload-zone.dragover::before {
+            opacity: 1;
+        }
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--primary);
+        }
+        .upload-zone.dragover {
+            background: var(--primary-light);
+        }
+        .upload-zone.has-image {
+            padding: 6px 12px;
+            border-style: solid;
+            border-color: var(--border);
+            background: var(--card-bg);
+        }
+        .upload-zone.has-image::before {
+            display: none;
+        }
+        .upload-zone.has-image:hover {
+            border-color: var(--primary);
+        }
+        .upload-icon {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: var(--text-muted);
+            stroke-width: 1.5;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .upload-zone.has-image .upload-icon {
+            width: 22px;
+            height: 22px;
+        }
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+            position: relative;
+        }
+        .upload-zone.has-image .upload-text {
+            display: none;
+        }
+        .upload-sub {
+            color: var(--text-muted);
+            font-size: 10px;
+            margin-left: 4px;
+            position: relative;
+        }
+        .upload-zone.has-image .upload-sub {
+            display: none;
+        }
+        .compact-hint {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            position: relative;
+            line-height: 1.5;
+        }
+        .upload-zone.has-image .compact-hint {
+            display: flex;
+        }
+        .compact-hint b {
+            color: var(--primary);
+            font-size: 13px;
+        }
+
+        /* 缩略图网格 */
+        .thumb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            background: var(--bg);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            max-height: 130px;
+            overflow-y: auto;
+            align-content: start;
+            transition: border-color .2s, background .2s;
+            flex-shrink: 0;
+        }
+        .thumb-grid.dragover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .thumb-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 16px 0;
+            line-height: 1.6;
+        }
+        .thumb-card {
+            border: 2px solid transparent;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+            transition: border-color .15s, box-shadow .15s;
+            position: relative;
+            aspect-ratio: 1 / 1;
+        }
+        .thumb-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .thumb-card canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .thumb-rm {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 18px;
+            height: 18px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(17, 24, 39, .55);
+            color: #fff;
+            font-size: 10px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity .15s;
+        }
+        .thumb-card:hover .thumb-rm {
+            opacity: 1;
+        }
+        .thumb-rm:hover {
+            background: #dc2626;
+        }
+
+        /* 参数面板 */
+        .param-group {
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .param-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .param-row .label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            width: 70px;
+            flex-shrink: 0;
+        }
+        .param-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            height: 6px;
+            cursor: pointer;
+        }
+        .param-row input[type="range"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .param-row input[type="range"]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+        .param-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+            margin-top: -5px;
+            cursor: pointer;
+        }
+        .param-row input[type="range"]:disabled::-webkit-slider-thumb {
+            background: #c4c9d4;
+            cursor: not-allowed;
+        }
+        .param-row input[type="range"]::-moz-range-track {
+            height: 6px;
+            background: #d1d5db;
+            border-radius: 3px;
+            border: none;
+        }
+        .param-row input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+            cursor: pointer;
+        }
+        .param-row input[type="range"]:disabled::-moz-range-thumb {
+            background: #c4c9d4;
+            cursor: not-allowed;
+        }
+        .param-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 6px;
+            padding: 2px 10px;
+            min-width: 48px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .param-row input[type="range"]:disabled + .param-value {
+            opacity: 0.4;
+            color: var(--text-muted);
+            background: #f3f4f6;
+        }
+        .param-row:has(input[type="range"]:disabled) .label {
+            opacity: 0.4;
+            color: var(--text-muted);
+        }
+
+        /* 分段控件（seg）均摊宽度 */
+        .seg {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            gap: 3px;
+            flex: 1;
+        }
+        .seg button {
+            flex: 1;
+            padding: 6px 8px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .seg button.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(79, 70, 229, .2);
+        }
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .check-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* 开关按钮 */
+        .toggle-row {
+            display: flex;
+            gap: 8px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all .15s;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .toggle-btn input {
+            display: none;
+        }
+        .toggle-btn:has(input:checked) {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(79, 70, 229, .2);
+        }
+        .toggle-btn:has(input:disabled) {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 导出栏 */
+        .export-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .export-bar .seg {
+            flex: 1;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            gap: 3px;
+        }
+        .export-bar .seg button {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text); /* 默认黑色 */
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .export-bar .seg button.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(79, 70, 229, .2);
+        }
+        .export-bar .seg.bg-option button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .export-bar .size-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .export-bar .size-control input[type="number"] {
+            width: 80px;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .export-bar .size-control input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+        .btn-green {
+            background: var(--green);
+            color: #fff;
+        }
+        .btn-green:hover {
+            background: var(--green-hover);
+            box-shadow: 0 2px 8px rgba(5, 150, 101, .3);
+        }
+        .btn-green:disabled {
+            background: #c4c9d4;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .btn-ghost {
+            background: #fff;
+            color: var(--text-secondary);
+            border: 2px solid var(--border);
+            padding: 6px 12px;
+        }
+        .btn-ghost:hover {
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+        .btn-ghost:disabled {
+            color: #c4c9d4;
+            border-color: #d8dce4;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-height: 18px;
+        }
+        .status.done {
+            color: var(--green);
+        }
+
+        /* ===== 全屏拖拽遮罩 ===== */
+        .drop-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .03);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .3s ease, visibility .3s ease, background .3s ease,
+                backdrop-filter .3s ease, -webkit-backdrop-filter .3s ease;
+        }
+        .drop-overlay.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            background: rgba(0, 0, 0, .12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .drop-overlay-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 36px 48px;
+            box-shadow: var(--shadow);
+            border: 2px dashed var(--primary);
+        }
+        .drop-overlay-icon {
+            width: 44px;
+            height: 44px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 1.5;
+        }
+        .drop-overlay-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .drop-overlay-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* ===== 全屏模糊进度遮罩 ===== */
+        .progress-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, .4);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .3s ease, visibility .3s ease;
+        }
+        .progress-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .progress-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 34px 52px;
+            box-shadow: var(--shadow);
+            min-width: 300px;
+        }
+        .progress-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: progressSpin .7s linear infinite;
+        }
+        @keyframes progressSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .progress-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .progress-bar {
+            width: 260px;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #7c6cf0);
+            border-radius: 4px;
+            transition: width .3s ease;
+        }
+        .progress-pct {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 860px) {
+            .main-area {
+                flex-direction: column;
+            }
+            .preview-wrap {
+                flex: 0 0 auto;
+                max-height: 60vh;
+                width: 100%;
+            }
+            .right-col {
+                max-width: 100%;
+            }
+            .export-bar .size-control input[type="number"] {
+                width: 60px;
+            }
+        }
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            .card {
+                padding: 16px;
+            }
+            .thumb-grid {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                max-height: 140px;
+            }
+            .export-bar {
+                flex-wrap: wrap;
+            }
+            .export-bar .btn {
+                flex: 1;
+                min-width: 60px;
+            }
+            .export-bar .seg {
+                flex: 0 0 100%;
+            }
+            .export-bar .size-control {
+                flex: 0 0 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>
+            智能居中工具
+            <small>导入 PNG/JPG/WebP/SVG（白底/透明均可）· 主体模式抠白底居中裁切（随机采样） / 原图模式缩放居中 · 导出正方形，白底/透明可选，尺寸格式可调，支持批量</small>
+        </h1>
+
+        <!-- 主区域 -->
+        <div class="main-area">
+            <!-- 左栏：正方形预览 -->
+            <div class="preview-wrap" id="previewWrap">
+                <div class="preview-empty" id="previewEmpty">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+                    请上传图片
+                </div>
+                <canvas id="previewCanvas"></canvas>
+            </div>
+
+            <!-- 右栏 -->
+            <div class="right-col">
+                <!-- 上传区 -->
+                <div class="upload-zone" id="dropZone">
+                    <svg class="upload-icon" viewBox="0 0 24 24">
+                        <path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="upload-text">点击或拖拽图片到此处（可多选）</div>
+                    <div class="upload-sub">支持 PNG / JPG / WebP / SVG</div>
+                    <div class="compact-hint"><b id="hintCount">0</b> 张已导入，点击或拖拽可继续添加</div>
+                </div>
+
+                <!-- 缩略图网格 -->
+                <div class="thumb-grid" id="thumbGrid">
+                    <div class="thumb-empty" id="thumbEmpty">暂无图片<br />点击上方区域导入</div>
+                </div>
+
+                <!-- 参数面板 -->
+                <div class="param-group">
+                    <!-- 模式 -->
+                    <div class="param-row">
+                        <span class="label">模式</span>
+                        <div class="seg" id="modeSeg">
+                            <button class="active" data-mode="subject">主体</button>
+                            <button data-mode="original">原图</button>
+                        </div>
+                    </div>
+                    <!-- 缩放（原图模式专用） -->
+                    <div class="param-row">
+                        <span class="label">缩放</span>
+                        <input type="range" id="scaleSlider" min="0.2" max="2.0" value="1.0" step="0.01" disabled />
+                        <span class="param-value" id="scaleVal">100%</span>
+                    </div>
+                    <!-- 边距（主体模式专用） -->
+                    <div class="param-row">
+                        <span class="label">边距</span>
+                        <input type="range" id="marginSlider" min="0" max="45" value="3" step="0.5" />
+                        <span class="param-value" id="marginVal">3%</span>
+                    </div>
+                    <!-- 白底阈值（主体模式专用） -->
+                    <div class="param-row">
+                        <span class="label">白底阈值</span>
+                        <input type="range" id="thresholdSlider" min="180" max="255" value="240" />
+                        <span class="param-value" id="thresholdVal">240</span>
+                    </div>
+                    <!-- 开关按钮 -->
+                    <div class="toggle-row">
+                        <label class="toggle-btn" title="导出时不携带">
+                            <input type="checkbox" id="showGuides" checked />
+                            <span>显示辅助线</span>
+                        </label>
+                        <label class="toggle-btn" title="自动检测并抠除白色背景">
+                            <input type="checkbox" id="removeWhite" checked />
+                            <span>抠除白底</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 导出栏 -->
+                <div class="param-group" style="gap:8px;">
+                    <!-- 格式 + 背景 -->
+                    <div class="export-bar">
+                        <div class="seg" id="fmtSeg">
+                            <button class="active" data-fmt="png">PNG</button>
+                            <button data-fmt="jpg">JPG</button>
+                        </div>
+                        <div class="seg bg-option" id="bgSeg">
+                            <button data-bg="white">白底</button>
+                            <button class="active" data-bg="transparent">透明底</button>
+                        </div>
+                    </div>
+                    <!-- 尺寸 + 下载方式 -->
+                    <div class="export-bar">
+                        <div class="size-control">
+                            <span>尺寸</span>
+                            <input type="number" id="exportSizeInput" value="1024" min="64" max="8192" step="8" />
+                            <span>px</span>
+                        </div>
+                        <div class="seg" id="dlModeSeg">
+                            <button class="active" data-dlmode="folder">指定文件夹</button>
+                            <button data-dlmode="each">逐个下载</button>
+                        </div>
+                    </div>
+                    <!-- 操作按钮 -->
+                    <div class="export-bar">
+                        <button class="btn btn-ghost" id="clearBtn" disabled>清空</button>
+                        <button class="btn btn-green" id="exportBtn" disabled style="flex:1;">
+                            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                            导出全部
+                        </button>
+                    </div>
+                    <div class="status" id="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全屏拖拽遮罩 -->
+    <div class="drop-overlay" id="dropOverlay">
+        <div class="drop-overlay-inner">
+            <svg class="drop-overlay-icon" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="drop-overlay-text">松开鼠标即可放入图片</div>
+            <div class="drop-overlay-sub">可批量拖放多张</div>
+        </div>
+    </div>
+
+    <!-- 全屏模糊进度遮罩 -->
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-box">
+            <div class="progress-spinner"></div>
+            <div class="progress-text" id="progressText">正在导出...</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-pct" id="progressPct">0%</div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // =====================================================================
+        // 工具函数
+        // =====================================================================
+        const $ = id => document.getElementById(id);
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // =====================================================================
+        // 核心算法（轮廓检测 + 最小外接圆 + 白底抠除）
+        // =====================================================================
+
+        function hasTransparentPixels(imageData) {
+            const { width, height, data } = imageData;
+            const total = width * height;
+            const step = Math.max(1, Math.floor(total / 50000));
+            for (let p = 0; p < total; p += step) {
+                if (data[p * 4 + 3] < 250) return true;
+            }
+            return false;
+        }
+
+        function detectWhiteBackground(imageData, threshold) {
+            const { width, height, data } = imageData;
+            const stride = Math.max(1, Math.floor(Math.max(width, height) / 220));
+            let total = 0,
+                white = 0;
+            const test = (x, y) => {
+                const i = (y * width + x) * 4;
+                total++;
+                if (data[i] >= threshold && data[i + 1] >= threshold && data[i + 2] >= threshold && data[i + 3] > 200)
+                    white++;
+            };
+            for (let x = 0; x < width; x += stride) { test(x, 0);
+                test(x, height - 1); }
+            for (let y = 0; y < height; y += stride) { test(0, y);
+                test(width - 1, y); }
+            return total > 0 && white / total > 0.85;
+        }
+
+        function floodClearWhite(imageData, threshold) {
+            const { width, height, data } = imageData;
+            const visited = new Uint8Array(width * height);
+            const stack = [];
+            const isWhite = idx => {
+                const o = idx * 4;
+                return data[o] >= threshold && data[o + 1] >= threshold && data[o + 2] >= threshold && data[o + 3] > 0;
+            };
+            const push = (x, y) => {
+                if (x < 0 || y < 0 || x >= width || y >= height) return;
+                const idx = y * width + x;
+                if (!visited[idx] && isWhite(idx)) { visited[idx] = 1;
+                    stack.push(idx); }
+            };
+            for (let x = 0; x < width; x++) { push(x, 0);
+                push(x, height - 1); }
+            for (let y = 0; y < height; y++) { push(0, y);
+                push(width - 1, y); }
+            while (stack.length) {
+                const idx = stack.pop();
+                const o = idx * 4;
+                if (data[o + 3] === 0) continue;
+                data[o + 3] = 0;
+                const x = idx % width,
+                    y = (idx / width) | 0;
+                push(x + 1, y);
+                push(x - 1, y);
+                push(x, y + 1);
+                push(x, y - 1);
+            }
+        }
+
+        function getContourPoints(canvas, maxPoints = 900) {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const { width, height } = canvas;
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const points = [];
+            const stride = Math.max(1, Math.floor(Math.max(width, height) / 220));
+            const alphaAt = (x, y) => {
+                if (x < 0 || y < 0 || x >= width || y >= height) return 0;
+                return data[(y * width + x) * 4 + 3];
+            };
+            for (let y = 0; y < height; y += stride) {
+                for (let x = 0; x < width; x += stride) {
+                    const alpha = alphaAt(x, y);
+                    if (alpha <= 16) continue;
+                    if (alphaAt(x + 1, y) <= 16 || alphaAt(x - 1, y) <= 16 ||
+                        alphaAt(x, y + 1) <= 16 || alphaAt(x, y - 1) <= 16) {
+                        points.push({ x, y });
+                    }
+                }
+            }
+            if (!points.length) {
+                for (let y = 0; y < height; y += stride)
+                    for (let x = 0; x < width; x += stride)
+                        if (alphaAt(x, y) > 16) points.push({ x, y });
+            }
+            if (points.length > maxPoints) {
+                const sampled = [];
+                for (let i = 0; i < maxPoints; i++)
+                    sampled.push(points[Math.floor(Math.random() * points.length)]);
+                return sampled;
+            }
+            return points;
+        }
+
+        function minEnclosingCircle(points) {
+            if (!points.length) return null;
+
+            function shuffle(arr) {
+                const a = arr.slice();
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function circleFromOne(a) { return { x: a.x, y: a.y, r: 0 }; }
+
+            function circleFromTwo(a, b) {
+                const x = (a.x + b.x) / 2,
+                    y = (a.y + b.y) / 2;
+                const r = Math.hypot(a.x - b.x, a.y - b.y) / 2;
+                return { x, y, r };
+            }
+
+            function circleFromThree(a, b, c) {
+                const a2 = a.x * a.x + a.y * a.y,
+                    b2 = b.x * b.x + b.y * b.y,
+                    c2 = c.x * c.x + c.y * c.y;
+                const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+                if (Math.abs(d) < 1e-10) {
+                    const c1 = circleFromTwo(a, b),
+                        c2 = circleFromTwo(a, c),
+                        c3 = circleFromTwo(b, c);
+                    return [c1, c2, c3].reduce((best, cur) => cur.r > best.r ? cur : best);
+                }
+                const ux = (a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d;
+                const uy = (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d;
+                const r = Math.hypot(ux - a.x, uy - a.y);
+                return { x: ux, y: uy, r };
+            }
+
+            function isInside(c, p) {
+                const dx = p.x - c.x,
+                    dy = p.y - c.y;
+                return dx * dx + dy * dy <= c.r * c.r + 1e-6;
+            }
+            const pts = shuffle(points);
+            let c = circleFromOne(pts[0]);
+            for (let i = 1; i < pts.length; i++) {
+                if (isInside(c, pts[i])) continue;
+                c = circleFromOne(pts[i]);
+                for (let j = 0; j < i; j++) {
+                    if (isInside(c, pts[j])) continue;
+                    c = circleFromTwo(pts[i], pts[j]);
+                    for (let k = 0; k < j; k++) {
+                        if (isInside(c, pts[k])) continue;
+                        c = circleFromThree(pts[i], pts[j], pts[k]);
+                    }
+                }
+            }
+            return c;
+        }
+
+        // =====================================================================
+        // 状态管理
+        // =====================================================================
+        const state = {
+            items: [], // { id, file, img, name, w, h, url }
+            selectedIdx: 0,
+            params: {
+                margin: 3, // 默认 3%
+                threshold: 240,
+                mode: 'subject', // 'subject' 或 'original'
+                showGuides: true,
+                removeWhite: true,
+                exportBg: 'transparent', // 'white' 或 'transparent'
+                exportSize: 1024, // 导出尺寸
+                scale: 1.0, // 原图缩放
+            },
+            fmt: 'png',
+            dlMode: 'folder',
+        };
+
+        let uid = 0;
+        const previewWrap = $('previewWrap');
+        const canvas = $('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewEmpty = $('previewEmpty');
+
+        // =====================================================================
+        // 处理单张图片（返回结果画布和circle信息）
+        // =====================================================================
+        function processImage(img, params, targetSize) {
+            const { margin, threshold, mode, removeWhite, scale } = params;
+            const srcW = img.naturalWidth || img.width || 1024;
+            const srcH = img.naturalHeight || img.height || 1024;
+
+            // 原图模式：直接应用缩放，超出画布裁剪，小于则居中
+            if (mode === 'original') {
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = targetSize;
+                outCanvas.height = targetSize;
+                const octx = outCanvas.getContext('2d');
+                octx.clearRect(0, 0, targetSize, targetSize);
+                const drawW = srcW * scale;
+                const drawH = srcH * scale;
+                const dx = (targetSize - drawW) / 2;
+                const dy = (targetSize - drawH) / 2;
+                octx.drawImage(img, dx, dy, drawW, drawH);
+                return { canvas: outCanvas, circle: null };
+            }
+
+            // 主体模式：智能居中
+            const maxSide = 1600;
+            const procScale = Math.min(1, maxSide / Math.max(srcW, srcH));
+            const pw = Math.max(1, Math.round(srcW * procScale));
+            const ph = Math.max(1, Math.round(srcH * procScale));
+            const procCanvas = document.createElement('canvas');
+            procCanvas.width = pw;
+            procCanvas.height = ph;
+            const pctx = procCanvas.getContext('2d', { willReadFrequently: true });
+            pctx.clearRect(0, 0, pw, ph);
+            pctx.drawImage(img, 0, 0, pw, ph);
+
+            let imageData = pctx.getImageData(0, 0, pw, ph);
+            const isWhiteBg = detectWhiteBackground(imageData, threshold);
+
+            if (removeWhite && isWhiteBg) {
+                floodClearWhite(imageData, threshold);
+                pctx.putImageData(imageData, 0, 0);
+            }
+
+            const contourPoints = getContourPoints(procCanvas, 900);
+            let circle = null;
+            if (contourPoints.length) circle = minEnclosingCircle(contourPoints);
+            if (!circle || !circle.r) {
+                circle = { x: pw / 2, y: ph / 2, r: Math.min(pw, ph) / 2 };
+            }
+
+            const targetRadius = targetSize * (0.5 - margin / 100);
+            const scaleFactor = circle.r > 0 ? targetRadius / circle.r : Math.min(targetSize / pw, targetSize / ph) * (1 -
+                margin * 2 / 100);
+
+            const outCanvas = document.createElement('canvas');
+            outCanvas.width = targetSize;
+            outCanvas.height = targetSize;
+            const octx = outCanvas.getContext('2d');
+            octx.clearRect(0, 0, targetSize, targetSize);
+            octx.save();
+            octx.translate(targetSize / 2, targetSize / 2);
+            octx.scale(scaleFactor, scaleFactor);
+            octx.translate(-circle.x, -circle.y);
+            octx.drawImage(procCanvas, 0, 0);
+            octx.restore();
+
+            return { canvas: outCanvas, circle };
+        }
+
+        // =====================================================================
+        // 渲染预览（固定使用 1024 尺寸）
+        // =====================================================================
+        function renderPreview(index) {
+            const item = state.items[index];
+            if (!item) {
+                canvas.style.display = 'none';
+                previewEmpty.style.display = 'flex';
+                return;
+            }
+            canvas.style.display = 'block';
+            previewEmpty.style.display = 'none';
+
+            const rect = previewWrap.getBoundingClientRect();
+            const size = Math.floor(Math.min(rect.width, rect.height)) || 400;
+            canvas.width = size;
+            canvas.height = size;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+
+            const { canvas: resultCanvas } = processImage(item.img, state.params, 1024);
+            ctx.clearRect(0, 0, size, size);
+            // 根据导出背景选项决定预览背景色：白底填充白色，透明底保持透明（显示 CSS 棋盘格）
+            if (state.params.exportBg === 'white') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, size, size);
+            }
+            ctx.drawImage(resultCanvas, 0, 0, size, size);
+
+            if (state.params.showGuides && state.params.mode === 'subject') {
+                const marginPx = size * state.params.margin / 100;
+                ctx.save();
+                const cx = size / 2,
+                    cy = size / 2,
+                    r = size / 2 - marginPx;
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // =====================================================================
+        // 生成缩略图（固定 1024）
+        // =====================================================================
+        function renderThumbnail(item, thumbSize = 80) {
+            const c = document.createElement('canvas');
+            c.width = thumbSize;
+            c.height = thumbSize;
+            const tctx = c.getContext('2d');
+
+            // 根据导出背景选项决定缩略图背景
+            if (state.params.exportBg === 'white') {
+                tctx.fillStyle = '#ffffff';
+                tctx.fillRect(0, 0, thumbSize, thumbSize);
+            } else {
+                const cs = 8;
+                for (let y = 0; y < thumbSize; y += cs)
+                    for (let x = 0; x < thumbSize; x += cs) {
+                        tctx.fillStyle = ((x / cs + y / cs) % 2 === 0) ? '#f1f3f5' : '#fff';
+                        tctx.fillRect(x, y, cs, cs);
+                    }
+            }
+
+            const { canvas: resultCanvas } = processImage(item.img, state.params, 1024);
+            tctx.drawImage(resultCanvas, 0, 0, thumbSize, thumbSize);
+
+            if (state.params.showGuides && state.params.mode === 'subject') {
+                const marginPx = thumbSize * state.params.margin / 100;
+                tctx.save();
+                const cx = thumbSize / 2,
+                    cy = thumbSize / 2,
+                    r = thumbSize / 2 - marginPx;
+                tctx.strokeStyle = '#ef4444';
+                tctx.lineWidth = 1.2;
+                tctx.setLineDash([2, 2]);
+                tctx.beginPath();
+                tctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                tctx.stroke();
+                tctx.restore();
+            }
+            return c;
+        }
+
+        // =====================================================================
+        // 渲染缩略图网格
+        // =====================================================================
+        function renderThumbGrid() {
+            const grid = $('thumbGrid');
+            grid.innerHTML = '';
+            if (!state.items.length) {
+                grid.innerHTML = '<div class="thumb-empty" id="thumbEmpty">暂无图片<br />点击上方区域导入</div>';
+                $('clearBtn').disabled = true;
+                $('exportBtn').disabled = true;
+                $('hintCount').textContent = '0';
+                return;
+            }
+            state.items.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'thumb-card' + (idx === state.selectedIdx ? ' active' : '');
+                const thumbCanvas = renderThumbnail(item, 80);
+                card.appendChild(thumbCanvas);
+
+                const rm = document.createElement('button');
+                rm.className = 'thumb-rm';
+                rm.textContent = '×';
+                rm.title = '移除';
+                rm.addEventListener('click', e => {
+                    e.stopPropagation();
+                    state.items.splice(idx, 1);
+                    if (state.selectedIdx >= state.items.length) state.selectedIdx = state.items.length - 1;
+                    if (state.selectedIdx < 0) state.selectedIdx = 0;
+                    renderAll();
+                });
+                card.appendChild(rm);
+                card.addEventListener('click', () => {
+                    state.selectedIdx = idx;
+                    renderAll();
+                });
+                grid.appendChild(card);
+            });
+            $('clearBtn').disabled = false;
+            $('exportBtn').disabled = false;
+            $('hintCount').textContent = state.items.length;
+        }
+
+        // =====================================================================
+        // 全量渲染 + 控件状态更新
+        // =====================================================================
+        function renderAll() {
+            renderPreview(state.selectedIdx);
+            renderThumbGrid();
+            $('dropZone').classList.toggle('has-image', state.items.length > 0);
+            updateExportBgState();
+            updateControlsByMode();
+        }
+
+        // =====================================================================
+        // 控件联动：根据模式启用/禁用
+        // =====================================================================
+        function updateControlsByMode() {
+            const isSubject = state.params.mode === 'subject';
+            // 缩放：仅原图模式
+            $('scaleSlider').disabled = isSubject;
+            // 边距：仅主体模式
+            $('marginSlider').disabled = !isSubject;
+            // 阈值：仅主体模式且抠白底勾选时启用
+            const thresholdEnabled = isSubject && state.params.removeWhite;
+            $('thresholdSlider').disabled = !thresholdEnabled;
+            // 抠白底复选框：仅主体模式启用
+            $('removeWhite').disabled = !isSubject;
+            // 辅助线：仅主体模式有意义（原图模式不绘制辅助线）
+            $('showGuides').disabled = !isSubject;
+            // 如果切换到原图，强制取消抠白底和辅助线
+            if (!isSubject) {
+                $('removeWhite').checked = false;
+                state.params.removeWhite = false;
+                $('showGuides').checked = false;
+                state.params.showGuides = false;
+            }
+        }
+
+        // =====================================================================
+        // 导出背景选项联动
+        // =====================================================================
+        function updateExportBgState() {
+            const fmt = state.fmt;
+            const bgButtons = document.querySelectorAll('#bgSeg button');
+            if (fmt === 'jpg') {
+                bgButtons.forEach(b => {
+                    b.disabled = true;
+                    b.classList.toggle('active', b.dataset.bg === 'white');
+                });
+                state.params.exportBg = 'white';
+            } else {
+                bgButtons.forEach(b => {
+                    b.disabled = false;
+                });
+                bgButtons.forEach(b => b.classList.toggle('active', b.dataset.bg === state.params.exportBg));
+            }
+        }
+
+        // =====================================================================
+        // 导入图片（支持 SVG）
+        // =====================================================================
+        function addFiles(fileList) {
+            let added = 0;
+            Array.from(fileList).forEach(f => {
+                if (!f.type.startsWith('image/')) return;
+                const url = URL.createObjectURL(f);
+                const img = new Image();
+                img.onload = () => {
+                    let w = img.naturalWidth || img.width || 800;
+                    let h = img.naturalHeight || img.height || 800;
+                    if (w === 0) w = 800;
+                    if (h === 0) h = 800;
+                    state.items.push({
+                        id: uid++,
+                        file: f,
+                        img: img,
+                        name: f.name,
+                        w: w,
+                        h: h,
+                        url: url
+                    });
+                    if (state.items.length === 1) state.selectedIdx = 0;
+                    renderAll();
+                    setStatus(`已导入 ${state.items.length} 张图片`);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            });
+        }
+
+        // =====================================================================
+        // UI 事件绑定
+        // =====================================================================
+
+        // ---- 上传区 ----
+        const dz = $('dropZone');
+        dz.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            input.onchange = () => { if (input.files.length) addFiles(input.files); };
+            input.click();
+        });
+        dz.addEventListener('dragover', e => { e.preventDefault();
+            dz.classList.add('dragover'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+        dz.addEventListener('drop', e => {
+            e.preventDefault();
+            dz.classList.remove('dragover');
+            if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        });
+
+        // ---- 缩略图网格也支持拖拽 ----
+        const thumbGrid = $('thumbGrid');
+        thumbGrid.addEventListener('dragover', e => { e.preventDefault();
+            thumbGrid.classList.add('dragover'); });
+        thumbGrid.addEventListener('dragleave', () => thumbGrid.classList.remove('dragover'));
+        thumbGrid.addEventListener('drop', e => {
+            e.preventDefault();
+            thumbGrid.classList.remove('dragover');
+            if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        });
+
+        // ---- 全屏拖拽遮罩 ----
+        const dropOverlay = $('dropOverlay');
+        let dragDepth = 0,
+            showTimer = null;
+
+        function hideDropOverlay() {
+            if (showTimer) { clearTimeout(showTimer);
+                showTimer = null; }
+            dropOverlay.classList.remove('show');
+        }
+        window.addEventListener('dragenter', e => {
+            e.preventDefault();
+            if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+            dragDepth++;
+            if (!showTimer) showTimer = setTimeout(() => { dropOverlay.classList.add('show');
+                showTimer = null; }, 40);
+        });
+        window.addEventListener('dragover', e => e.preventDefault());
+        window.addEventListener('dragleave', e => {
+            if (dragDepth > 0) dragDepth--;
+            if (dragDepth === 0) hideDropOverlay();
+        });
+        window.addEventListener('drop', e => {
+            e.preventDefault();
+            dragDepth = 0;
+            hideDropOverlay();
+            if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        });
+
+        // ---- 参数滑块 ----
+        function bindParam(sliderId, valId, key, formatter = v => v) {
+            const slider = $(sliderId),
+                valEl = $(valId);
+            slider.addEventListener('input', () => {
+                const v = parseFloat(slider.value);
+                state.params[key] = v;
+                valEl.textContent = formatter(v);
+                renderAll();
+            });
+        }
+        bindParam('marginSlider', 'marginVal', 'margin', v => v + '%');
+        bindParam('thresholdSlider', 'thresholdVal', 'threshold');
+
+        // ---- 缩放滑块 ----
+        function bindScaleSlider() {
+            const slider = $('scaleSlider');
+            const val = $('scaleVal');
+            slider.addEventListener('input', () => {
+                const v = parseFloat(slider.value);
+                state.params.scale = v;
+                val.textContent = Math.round(v * 100) + '%';
+                renderAll();
+            });
+        }
+        bindScaleSlider();
+
+        // ---- 导出尺寸输入 ----
+        const exportSizeInput = $('exportSizeInput');
+        exportSizeInput.addEventListener('change', () => {
+            let val = parseInt(exportSizeInput.value, 10);
+            if (isNaN(val) || val < 64) val = 64;
+            if (val > 8192) val = 8192;
+            state.params.exportSize = val;
+            exportSizeInput.value = val;
+        });
+        state.params.exportSize = parseInt(exportSizeInput.value, 10) || 1024;
+
+        // ---- 模式切换 ----
+        document.querySelectorAll('#modeSeg button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#modeSeg button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.params.mode = btn.dataset.mode;
+                // 切回主体模式时恢复抠白底和辅助线默认开启
+                if (state.params.mode === 'subject') {
+                    state.params.removeWhite = true;
+                    $('removeWhite').checked = true;
+                    state.params.showGuides = true;
+                    $('showGuides').checked = true;
+                }
+                renderAll();
+            });
+        });
+
+        // ---- 复选框 ----
+        $('showGuides').addEventListener('change', e => {
+            state.params.showGuides = e.target.checked;
+            renderAll();
+        });
+        $('removeWhite').addEventListener('change', e => {
+            state.params.removeWhite = e.target.checked;
+            renderAll();
+        });
+
+        // ---- 格式切换 ----
+        document.querySelectorAll('#fmtSeg button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#fmtSeg button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.fmt = btn.dataset.fmt;
+                updateExportBgState();
+                renderAll();
+            });
+        });
+
+        // ---- 导出背景切换 ----
+        document.querySelectorAll('#bgSeg button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                document.querySelectorAll('#bgSeg button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.params.exportBg = btn.dataset.bg;
+                renderAll();
+            });
+        });
+
+        // ---- 导出方式切换 ----
+        document.querySelectorAll('#dlModeSeg button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#dlModeSeg button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.dlMode = btn.dataset.dlmode;
+            });
+        });
+
+        // ---- 清空 ----
+        $('clearBtn').addEventListener('click', () => {
+            state.items.forEach(it => URL.revokeObjectURL(it.url));
+            state.items = [];
+            state.selectedIdx = 0;
+            renderAll();
+            setStatus('已清空');
+        });
+
+        // =====================================================================
+        // 导出功能
+        // =====================================================================
+        function setStatus(msg, ok) {
+            const el = $('status');
+            el.textContent = msg;
+            el.className = 'status' + (ok ? ' done' : '');
+        }
+
+        function showProgress(label) {
+            const ov = $('progressOverlay');
+            $('progressText').textContent = label;
+            $('progressFill').style.width = '0%';
+            $('progressPct').textContent = '0%';
+            ov.classList.add('show');
+        }
+
+        function updateProgress(done, total) {
+            const pct = Math.min(100, Math.round(done / total * 100));
+            $('progressText').textContent = `正在处理 ${done}/${total}`;
+            $('progressFill').style.width = pct + '%';
+            $('progressPct').textContent = pct + '%';
+        }
+
+        function hideProgress() {
+            $('progressOverlay').classList.remove('show');
+        }
+
+        async function renderBlob(item, fmt, bg, exportSize) {
+            const { canvas: resultCanvas } = processImage(item.img, state.params, exportSize);
+            const mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+            const finalBg = (fmt === 'jpg') ? 'white' : bg;
+            if (finalBg === 'white') {
+                const temp = document.createElement('canvas');
+                temp.width = resultCanvas.width;
+                temp.height = resultCanvas.height;
+                const tctx = temp.getContext('2d');
+                tctx.fillStyle = '#ffffff';
+                tctx.fillRect(0, 0, temp.width, temp.height);
+                tctx.drawImage(resultCanvas, 0, 0);
+                return new Promise(r => temp.toBlob(r, mime, fmt === 'png' ? undefined : 0.92));
+            } else {
+                return new Promise(r => resultCanvas.toBlob(r, mime, fmt === 'png' ? undefined : 0.92));
+            }
+        }
+
+        function baseName(item, ext) {
+            return (item.name || 'image').replace(/\.[^.]+$/, '') + '_居中.' + ext;
+        }
+
+        async function exportAll() {
+            if (!state.items.length) return;
+            const fmt = state.fmt;
+            const ext = fmt === 'png' ? 'png' : 'jpg';
+            const bg = state.params.exportBg;
+            const exportSize = state.params.exportSize;
+            const useFolder = state.dlMode === 'folder' && window.showDirectoryPicker;
+            let dir = null;
+            if (useFolder) {
+                try { dir = await window.showDirectoryPicker(); } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    else { setStatus('选择文件夹失败', false); return; }
+                }
+            }
+
+            $('exportBtn').disabled = true;
+            $('clearBtn').disabled = true;
+            showProgress('正在导出...');
+
+            let done = 0;
+            for (const item of state.items) {
+                updateProgress(done + 1, state.items.length);
+                const blob = await renderBlob(item, fmt, bg, exportSize);
+                let name = baseName(item, ext);
+
+                if (useFolder) {
+                    let seq = 1;
+                    for (;;) {
+                        try { await dir.getFileHandle(name);
+                            name = item.name.replace(/\.[^.]+$/, '') + '_居中_' + (seq++) + '.' + ext; } catch { break; }
+                    }
+                    const fh = await dir.getFileHandle(name, { create: true });
+                    const w = await fh.createWritable();
+                    await w.write(blob);
+                    await w.close();
+                } else {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = name;
+                    a.click();
+                    await sleep(80);
+                }
+                done++;
+            }
+            hideProgress();
+            $('exportBtn').disabled = false;
+            $('clearBtn').disabled = false;
+            setStatus(`成功导出 ${done} 张图片（${fmt.toUpperCase()}，尺寸 ${exportSize}×${exportSize}，背景：${bg === 'white' ? '白底' : '透明底'}）`, true);
+        }
+
+        $('exportBtn').addEventListener('click', exportAll);
+
+        // =====================================================================
+        // 窗口尺寸变化时重新渲染
+        // =====================================================================
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (state.items.length) renderAll();
+            }, 120);
+        });
+
+        // =====================================================================
+        // 初始化
+        // =====================================================================
+        renderAll();
+        updateExportBgState();
+        updateControlsByMode();
+        $('thresholdSlider').disabled = !state.params.removeWhite;
+    </script>
+</body>
+</html>
