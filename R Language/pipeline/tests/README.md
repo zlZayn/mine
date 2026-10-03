@@ -1,16 +1,28 @@
-"""`pipeline` 对应测试。
+# tests/ — what is covered
 
-覆盖重点是**踩过的坑**，不是覆盖率数字。每个测试对应一次真实故障。
+The point of this suite is **failures that actually happened**, not a coverage number.
+Each test traces back to a real breakage.
 
-- `test_slug.py`：slug 生成与稳定取色
-- `test_frontmatter.py`：YAML 子集读写
-- `test_title_prefix.py`：标题前缀强制（含"裸标题为空"撞车事故）
-- `test_normalize.py`：图片引用与代码块语言
-- `test_build.py`：产物一致性（index.html 回归守卫）
+## Files and their coverage
 
-运行：
+| File | Covers | Traces back to |
+| --- | --- | --- |
+| `test_slug.py` | Slug generation, export-suffix stripping | Zhihu export filenames carrying `-落日阳红的文章` |
+| `test_frontmatter.py` | The YAML subset reader/writer | A leading newline in the body silently breaking every `body.startswith(...)` check |
+| `test_title_prefix.py` | Prefix enforcement | A bare title being eaten because "empty bare title" was used to mean "no prefix" |
+| `test_normalize.py` | Image references, code-fence language sniffing | Filenames containing spaces and parentheses being truncated; Zhihu labelling R code as `ada` |
+| `test_build.py` | Artifact consistency, `index.html` regression guard | Colors drifting, Chinese leaking into the index, pipeline files appearing under `en/` |
+| `test_palette.py` | Color allocation | New articles hashing onto the same color as a neighbour while other colors went unused |
+
+## Running
 
 ```bash
 cd "R Language/pipeline"
 uv run pytest -q
 ```
+
+## What these tests deliberately do not do
+
+- No coverage padding: a test that cannot fail for a meaningful reason is not added
+- No implementation-detail assertions: they test the behaviour that broke, not internals
+- No network: the whole suite runs offline, like the build

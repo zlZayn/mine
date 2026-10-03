@@ -1,132 +1,145 @@
-# 规则分层：什么该写死、什么该交给工具
+# Rule layers: what to hardcode, what to delegate
 
-> 本文回答一个具体问题：**哪些东西要统一、用什么机制保证。**
+> This document answers one question: **which things need to be uniform, and what mechanism enforces them.**
 >
-> 核心判据一条：**能用成熟工具机械保证的，就不要自己写规则；必须靠语义理解才能判断的，才自己写。**
+> The single criterion: **if a mature tool can guarantee it mechanically, do not write your own rule; write your own only when judging it requires understanding the content.**
 
 ---
 
-## 一、三层分工
+## 1. Three layers
 
-| 层 | 机制 | 保证什么 | 为什么放这一层 |
+| Layer | Mechanism | Guarantees | Why here |
 | --- | --- | --- | --- |
-| **格式层** | `mdformat` + 插件 | 空行、列表符号、标题间距、行尾、多余空格、表格对齐 | 纯机械、无歧义、有成熟工具，自己写必然漏 |
-| **约束层** | `rlang_pipeline` 的 `check` | 标题前缀、frontmatter 字段、图片存在、slug 唯一、产物隔离、index 新鲜度 | 需要理解"这是什么文章"，工具做不了 |
-| **命令层** | 运行命令固定 | 命令名、退出码、状态常量 | 是程序契约，改了调用方就崩 |
+| **Format** | `markdownlint-cli2` | Blank lines around headings, fences and lists; list-marker spacing; trailing whitespace; hard tabs; repeated blank lines; final newline | Purely mechanical and unambiguous. A hand-written rule set will always miss cases. |
+| **Semantic** | `rlang_pipeline check` | Title prefixes, frontmatter fields, image existence, slug uniqueness, artifact isolation, index freshness | Requires knowing *what kind of article this is*. A generic linter cannot decide it. |
+| **Interface** | Fixed commands | Subcommand names, exit codes, status constants | These are program contracts. Changing them breaks callers. |
 
 ---
 
-## 二、格式层：交给 mdformat
+## 2. Format layer: delegated to markdownlint
 
-### 必须装的插件
+### Configuration
+
+Everything lives in [`.markdownlint-cli2.jsonc`](../../.markdownlint-cli2.jsonc) at the repository root.
+One file, used by the CLI, by local runs, and by CI — no second copy.
 
 ```bash
-mdformat --extensions frontmatter,gfm,tables \
-         --wrap=no --end-of-line=lf <paths>
+npx markdownlint-cli2          # check
+npx markdownlint-cli2 --fix    # fix what is fixable
 ```
 
-| 插件 | 不装会怎样 |
+### Rules deliberately disabled
+
+| Rule | Why disabled |
 | --- | --- |
-| `mdformat-frontmatter` | **frontmatter 被摧毁** —— 已实测：YAML 被折叠成一个 `## en-title: ...` 标题 + 一条分隔线 |
-| `mdformat-gfm` | 表格与删除线等 GFM 语法不被识别 |
-| `mdformat-tables` | 表格单元格不做对齐规范化 |
+| `MD013` line length | Conflicts with the existing content style; wrapping prose at 80 columns would churn every article for no gain |
+| `MD041`, `MD025` first-line heading | These files start with frontmatter, not a heading |
+| `MD033` inline HTML | Occasionally needed |
+| `MD036` emphasis as heading | The author uses bold lead-ins deliberately |
+| `MD045` image alt text | Low value here; the images are figures already described by surrounding prose |
 
-### 实测它改了什么
+### Rules deliberately kept
 
-在 `en/broom-package-for-tidy-modeling/index.md` 上实测，只有三类改动：
+`MD022`, `MD031`, `MD032` (blank lines around headings, fences, lists), `MD012`
+(repeated blank lines), `MD030` (list-marker spacing), `MD009` (trailing spaces),
+`MD010` (hard tabs), `MD047` (final newline), `MD046`/`MD048` (fence style).
 
-| 改动 | 判断 |
-| --- | --- |
-| `-   item` → `- item`（列表缩进规范） | **要**，一致性收益 |
-| `* * *` → 下划线分隔线（主题分隔符规范形式） | 可接受，纯外观 |
-| frontmatter 与正文之间多余空行收起 | **要**，正是"空行格式化" |
+### One rule that had to be changed rather than kept or dropped
 
-结论：**装齐插件后，它的改动都是我们要的。**
+`MD029` defaults to lazy numbering, which rewrites an ordered list `1. 2. 3.` into
+`1. 1. 1.`. Rendering is equivalent but the source wording is altered for no reason.
+It is set to `"style": "ordered"`.
 
-### 边界：只格式化源文件
+### Scope: article sources only
 
-- 施加对象：`R Language/en/**/index.md`、`R Language/zh/**/index.md`
-- **不施加**于：`index.html`、`en/**/index.html`（生成物）、模板、CSS
+- Applied to: `R Language/en/**/index.md`, `R Language/zh/**/index.md`
+- **Not** applied to: `index.html`, `en/**/index.html` (artifacts), templates, CSS,
+  and the root documents (`README.md`, `AGENTS.md`, `ARCHITECTURE.md`), which carry
+  the author's voice — `MD026` would strip the trailing periods from their headings
 
-### 为什么不选 Prettier
+### Why not Prettier
 
-- Prettier 需要 Node；本仓流水线已是纯 Python（`uv`）
-- mdformat 是纯 Python，与现有工具链同源，无需第二套运行时
-- 若将来引入前端工具链，Prettier 可作补充，但 Markdown 仍建议单源（避免两个格式化器互相打架）
+- Prettier needs Node; this pipeline is pure Python managed by `uv`
+- markdownlint-cli2 is the tool actually in use, and one linter is enough
+- If a frontend toolchain arrives later, Prettier can be added for other languages,
+  but Markdown should keep a single source of truth to avoid two tools fighting
 
 ---
 
-## 三、约束层：自己写，因为工具做不了
+## 3. Semantic layer: written by hand, because tools cannot do it
 
-| 规则 | 级别 | 可自动修 |
+| Rule | Level | Auto-fixable |
 | --- | --- | --- |
-| 英文标题以 `【R Language】` 开头 | error | 是（补前缀） |
-| 中文标题以 `【R 语言】` 开头 | error | 是（补前缀） |
-| 中英标题前缀不得互换 | error | 是 |
-| frontmatter 必填字段齐全 | error | 否（缺日期要人填） |
-| `zhihu-link` 形如 `https://zhuanlan.zhihu.com/p/\d+` | error | 否 |
-| 本地图片引用必须存在 | error | 否 |
-| slug 全局唯一 | error | 否 |
-| `index.html` 与内容一致 | error | 是（重新 build） |
-| `zh/` 下不得有 `.html` | error | 否 |
-| `en/` 下不得有流水线源码 | error | 否 |
-| 图片路径必须相对，不得绝对 | error | 否 |
-| 日期格式 `YYYY-MM-DD HH:MM` | error | 是（可无歧义解析时） |
-| 代码块语言标记正确 | warn | 是 |
-| 远程图床引用数量 | info | 否 |
+| English title starts with `【R Language】` | error | yes (prepend prefix) |
+| Chinese title starts with `【R 语言】` | error | yes (prepend prefix) |
+| The two prefixes are not swapped | error | yes |
+| Required frontmatter fields present | error | no (a missing date needs a human) |
+| `zhihu-link` shaped like `https://zhuanlan.zhihu.com/p/\d+` | error | no |
+| Every local image reference resolves | error | no |
+| Slugs are globally unique | error | no |
+| `index.html` matches the current content | error | yes (run `build`) |
+| No `.html` file under `zh/` | error | no |
+| No pipeline source under `en/` | error | no |
+| Image paths relative, never absolute | error | no |
+| Date in `YYYY-MM-DD HH:MM` form | error | yes when unambiguous |
+| Code-fence language correct | warn | yes |
+| Count of remote image references | info | no |
 
-**级别含义**
+**Levels**
 
-- `error`：`check` 非零退出，阻断提交
-- `warn`：打印但退出码仍为 0
-- `info`：仅统计
+- `error` — `check` exits non-zero and blocks the commit
+- `warn` — printed, exit code stays 0
+- `info` — statistics only
 
 ---
 
-## 四、什么该写死，什么该进配置
+## 4. What to hardcode, what to move into configuration
 
-这条最容易做错：**写死契约，配置事实。**
+The easiest thing to get wrong. The rule is: **hardcode contracts, configure facts.**
 
-| 类别 | 处理 | 例子 |
+| Kind | Treatment | Examples |
 | --- | --- | --- |
-| **程序契约（写死）** | 改了就破坏调用方 | 子命令名 `build`/`check`/`import`；退出码 0/1/2；`PREFIX_EN`/`PREFIX_ZH` 常量；frontmatter 键名 |
-| **站点事实（进 `site.toml`）** | 与代码无关，会变 | 色板、仓库地址、专栏链接、按钮文案、排序方向 |
-| **文章事实（进 frontmatter）** | 每篇不同 | 标题、知乎链接、发布时间 |
-| **来源映射（进 `vault-map.toml`）** | 只迁移时用 | 笔记路径、旧文件名、权威标题覆盖 |
+| **Program contract** (hardcode) | Changing it breaks callers | Subcommand names `build`/`check`/`import`; exit codes 0/1/2; the `PREFIX_EN`/`PREFIX_ZH` constants; frontmatter key names |
+| **Site facts** (→ `site.toml`) | Unrelated to code, and they change | Palette, repository URL, column URL, button labels, sort direction |
+| **Article facts** (→ frontmatter) | Different per article | Title, Zhihu link, publish time |
+| **Source mapping** (→ `vault-map.toml`) | Used only during migration | Note paths, old filenames, canonical title overrides |
 
-**反例（本仓历史上真实存在过的）**
+**Counter-examples that really existed in this repository**
 
-- 36 条文章标题链接写在 `generate_combined_cards.py` 里 → 应进 frontmatter
-- `d:\PythonDirectory\知乎\` 绝对路径 → 应从文件位置反推
-- 文章数 `9` 写死 → 应从目录扫描得出
-- 色板 12 个色值写在两个生成器里各一份 → 应进 `site.toml` 单源
+- 36 article titles and links written into `generate_combined_cards.py` → belong in frontmatter
+- The absolute path `d:\PythonDirectory\知乎\` → should be derived from the file location
+- The article count `9` hardcoded → should come from scanning directories
+- The 12 palette values duplicated in two generators → belong in `site.toml`, one source
 
-**正例**
+**A correct example**
 
-- `PREFIX_EN = "【R Language】"` 写在代码里是对的：它是版式契约，不是文章事实
-
----
-
-## 五、为什么不用 `random` 也不用系统时间
-
-写进规则是因为它们破坏的是**可复现性**，而可复现性是全部验证手段的地基：
-
-- 有 `random` → 同一输入两次构建结果不同 → `git diff index.html` 失去意义
-- 有时间戳 → 每次构建都产生噪声 diff → 无法判断"这次改动影响了什么"
-
-替代做法：
-
-- 需要"随机但有辨识度"的取值（颜色）→ 用 slug 的稳定哈希
-- 需要"当前时间"→ 不写进产物；时间属于内容，写在 frontmatter 里
+- `PREFIX_EN = "【R Language】"` in code is right: it is a layout contract, not an article fact
 
 ---
 
-## 六、落地位置
+## 5. Why neither `random` nor the system clock
 
-| 机制 | 位置 |
+They are banned because they destroy **reproducibility**, and reproducibility is the
+foundation every verification method here rests on:
+
+- With `random`, the same input builds differently twice, so `git diff index.html` means nothing
+- With timestamps, every build produces noise, so it is impossible to tell what a change affected
+
+Replacements:
+
+- Need a value that varies but stays recognizable (colors) → allocate it deterministically
+  across the sorted article list, pinned for published articles
+- Need "the current time" → do not put it in the artifact. Time is content; it belongs in frontmatter
+
+---
+
+## 6. Where each mechanism lives
+
+| Mechanism | Location |
 | --- | --- |
-| mdformat 依赖与插件版本 | `pipeline/pyproject.toml` 的 dev 依赖 |
-| 格式检查命令 | `check` 子命令内调用 |
-| 语义检查清单 | `cli.py` 的 `cmd_check` |
-| 站点事实 | `pipeline/site.toml` |
-| 来源映射 | `pipeline/vault-map.toml` |
+| Linter configuration | [`.markdownlint-cli2.jsonc`](../../.markdownlint-cli2.jsonc) |
+| Format check | `npx markdownlint-cli2`, also run from the `check` subcommand |
+| Semantic checks | `cmd_check` in [`cli.py`](src/rlang_pipeline/cli.py) |
+| Palette allocation | `allocate_palette` in [`config.py`](src/rlang_pipeline/config.py) |
+| Site facts | [`site.toml`](site.toml) |
+| Source mapping | [`vault-map.toml`](vault-map.toml) |

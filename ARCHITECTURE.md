@@ -1,107 +1,122 @@
-# Mine 架构说明
+# Mine — architecture
 
-本仓是「内容 + 一条流水线」的形态：`index.html` 是产物，Markdown 是数据源，
-`R Language/pipeline/` 是唯一的机器。
-
----
-
-## 一、核心目标
-
-1. 加一篇文章只动内容，不动代码。
-2. `index.html` 永远可由内容完整重建，不需要手工修补。
-3. 中英双语归档，中文只指向知乎、不发布。
-4. 构建可复现：同样的输入产出逐字节相同的输出。
+This repository is shaped as *content plus one pipeline*: `index.html` is the artifact,
+Markdown is the data source, and `R Language/pipeline/` is the only machine.
 
 ---
 
-## 二、数据流
+## 1. Goals
+
+1. Adding an article touches content only, never code.
+2. `index.html` can always be rebuilt in full from the content, with no manual patching.
+3. Both languages are archived; the Chinese version is never published, it points at Zhihu.
+4. Builds are reproducible: identical input produces byte-identical output.
+
+---
+
+## 2. Data flow
 
 ```
-Obsidian 笔记 / 知乎导出件
-        │  import（归一化：frontmatter、图片落盘、代码块语言）
+Obsidian note / Zhihu export
+        │  import  (normalize: frontmatter, copy images, code-fence language)
         ▼
 R Language/zh/<slug>/index.md ──┐
-                                │  slug 配对
-英文译文（人工或 AI 辅助）        │
+                                │  paired by slug
+English translation (human or AI-assisted)
         ▼                       │
-R Language/en/<slug>/index.md ──┴──► build ──► index.html            （首页卡片）
-                                        └───► en/<slug>/index.html   （英文阅读页）
-                                                  │
-                                                  ▼  workflow 白名单
-                                            GitHub Pages（只含 index.html + en/）
+R Language/en/<slug>/index.md ──┴──► build ──► index.html           (index cards)
+                                         └───► en/<slug>/index.html (English reading page)
+                                                   │
+                                                   ▼  workflow whitelist
+                                             GitHub Pages (index.html + en/ only)
 ```
 
 ---
 
-## 三、不可破坏的约束
+## 3. Invariants
 
-| 约束 | 理由 | 违反后果 |
+Breaching any of these is a bug, not a style choice.
+
+| Invariant | Why | What breaking it causes |
 | --- | --- | --- |
-| `slug` 是唯一配对键 | 旧流程靠 `_1` 对 `_1` 的下标顺序配对，两边顺序无关时静默错位 | 卡片中英标题张冠李戴 |
-| 构建零网络 | 数据必须来自仓库内的 Markdown | CI 依赖外部站点，对方改版即失败 |
-| 无 `random`、无系统时间 | 输出不含时间戳，`git diff` 才能精确反映内容变化 | 每次构建都产生无意义 diff |
-| Tailwind 类名写字面量 | CDN 版 JIT 按字面量扫源码，插值拼出的类名扫不到 | 卡片渐变随机失效 |
-| 颜色用固定分配表 | 按发布时间自动分配时，插入新文章会让其后所有卡片变色 | 已发布页面颜色漂移 |
-| 中文不进 Pages 产物 | 中文只指向知乎，站点上不应出现中文正文 | 与发布策略冲突 |
-| 标题前缀由代码强制 | 靠人记必然漏 | 卡片版式不统一 |
-| 缺数据报错不兜底 | 旧流程匹配 0 条也打印"成功"，产出空页面 | 静默产出坏页面 |
+| `slug` is the only pairing key | The old pipeline paired by index (`_1` with `_1`), silently misaligning whenever the two sides disagreed on order | English and Chinese titles land on the wrong cards |
+| No network during build | Data must come from Markdown inside the repository | CI depends on external sites; their next redesign breaks the build |
+| No `random`, no system clock | The output carries no timestamps, so `git diff` reflects content changes exactly | Every build produces a meaningless diff |
+| Tailwind class names must be literal | The CDN JIT scans source text; interpolated class names are never seen | Card gradients silently stop rendering |
+| Colors come from an allocation over the sorted list, pinned for published articles | Assigning purely by recency makes every later card change color when an article is inserted | Published pages shift color |
+| Chinese never enters the Pages artifact | The Chinese version points at Zhihu; Chinese prose should not appear on the site | Conflicts with the publishing policy |
+| Title prefixes enforced by code | Relying on memory guarantees omissions | Card layout becomes inconsistent |
+| Missing data fails loudly | The old pipeline printed "success" after matching zero items and produced an empty page | Broken pages ship silently |
 
 ---
 
-## 四、关键设计决策
+## 4. Key decisions
 
-### 1. frontmatter 作为数据库
+### 1. Frontmatter as the database
 
-- 中文侧 `zhihu-title` / `zhihu-link` / `zhihu-created-at` 是卡片中文标题、知乎按钮、排序依据
-- 英文侧 `en-title` 是卡片英文标题
-- 不再有"文章清单"文件；清单就是目录扫描结果
+- Chinese side: `zhihu-title`, `zhihu-link`, `zhihu-created-at` drive the card's Chinese
+  title, the Zhihu button, and the sort order
+- English side: `en-title` drives the card's English title
+- There is no "article list" file; the list is the directory scan
 
-**替代方案**：单独维护 `articles.yml` 清单。
-否决理由：清单与 frontmatter 会各自漂移，违反"同一事实只有一个 home"。
+**Alternative considered:** maintain an `articles.yml` manifest.
+**Rejected because:** the manifest and the frontmatter would drift apart, violating
+"one home per fact".
 
-### 2. 目录即标识
+### 2. The directory *is* the identity
 
-`en/<slug>/index.md` 与 `zh/<slug>/index.md`。
-`index.md` 与 `assets/` 同级，图片引用是相对路径，在仓库、Obsidian、Pages 三处都能解析。
+`en/<slug>/index.md` and `zh/<slug>/index.md`, with `assets/` beside `index.md` so image
+references are relative and resolve in the repository, in Obsidian, and on Pages alike.
 
-**替代方案**：`en/<slug>.md` + 全局 `en/assets/`。
-否决理由：全局 assets 会有重名冲突，且图片与文章的从属关系被抹掉。
+**Alternative considered:** `en/<slug>.md` with a global `en/assets/`.
+**Rejected because:** a global asset directory collides on duplicate filenames and erases
+which images belong to which article.
 
-### 3. Pages 产物保持与仓库同构
+### 3. The Pages artifact mirrors the repository
 
-`_site/R Language/en/<slug>/index.html` 与仓库路径一致，
-所以文章页里 `../../../index.html` 相对链接在本地与线上都成立。
+`_site/R Language/en/<slug>/index.html` matches the repository path, so the
+`../../../index.html` relative link in an article page works both locally and on the live site.
 
-**替代方案**：把 `en/` 拍平到站点根。
-否决理由：相对链接层级随环境变化，需要在构建时区分环境，脆弱。
+**Alternative considered:** flatten `en/` to the site root.
+**Rejected because:** the relative-link depth would then depend on the environment, forcing
+the build to branch on it — fragile.
 
-### 4. 产物是白名单不是整仓
+### 4. Whitelist, not whole-repository upload
 
-旧 workflow 用 `path: '.'`，等于把整个仓库（含中文、源码、配置）打包公开。
-现在只上传 `index.html` + `R Language/en/`，并在 CI 里断言产物中无中文、无源码。
+The old workflow used `path: '.'`, which packed the entire repository — Chinese content,
+source code, configuration — into publicly downloadable static files. The workflow now
+uploads `index.html` plus `R Language/en/` only, and CI asserts that the artifact contains
+no Chinese and no pipeline source.
 
-### 5. 内容归一化与站点构建分离
+### 5. Normalization is separate from the build
 
-- `normalize.py`：处理源文件的脏数据（Obsidian 图片语法、知乎错误的代码块语言、缺失 frontmatter）
-- `build.py`：只做"读结构化数据 → 渲染"，不碰脏数据
+- `normalize.py` handles dirty source data: Obsidian image syntax, Zhihu's wrong
+  code-fence languages, missing frontmatter
+- `build.py` only reads structured data and renders; it never touches dirty input
 
-**理由**：归一化是一次性脏活，构建是每次都要跑的干净路径。混在一起会让构建路径重新变脏。
-
----
-
-## 五、防错清单
-
-- 新增文章后必须跑 `check`：缺英文、缺发布时间、图缺失、`index.html` 过期都会被拦下
-- `check` 会验证标题前缀（`【R Language】` / `【R 语言】`）与知乎链接形态
-- `check` 会检查 `zh/` 下有没有混入 `.html`
-- workflow 在部署前比对 `index.html` 与内容是否一致，过期则失败而不是静默发布旧页面
-- 图片本地化后必须确认落盘：`zh/` 下的 `assets/` 是唯一真源
+**Reason:** normalization is a one-off chore, while the build runs on every change. Mixing
+them lets the dirt leak back into the build path.
 
 ---
 
-## 六、已知边界
+## 5. Guardrails
 
-- 仓库是 public，`zh/` 的**源码**在 GitHub 网页上仍可见；
-  「不发布」的准确含义是「不进 Pages 产物、不出现在 `index.html`」
-- 英文正文允许保留中文：行内代码里的中文变量名、中文参考文献标题（译成英文反而无法检索）
-- 指向知乎图床的远程图片保留为外链（实测允许跨站热链），不强制本地化
+- Run `check` after adding an article. A missing translation, a missing publish date,
+  a missing image, or a stale `index.html` are all caught.
+- `check` validates title prefixes (`【R Language】` / `【R 语言】`) and the shape of the Zhihu link.
+- `check` verifies that no `.html` file has appeared under `zh/`.
+- Before deploying, the workflow compares `index.html` against the content and fails rather
+  than silently publishing a stale page.
+- After localizing images, confirm they landed: `assets/` under `zh/` is the single source of truth.
+
+---
+
+## 6. Known boundaries
+
+- The repository is public, so the **sources** under `zh/` remain visible on GitHub.
+  "Not published" means precisely: absent from the Pages artifact and from `index.html`.
+- Chinese is allowed inside English prose in two cases: identifier names inside inline code,
+  and the titles of Chinese-language references. Translating either would make the text
+  harder to search, not easier to read.
+- Images hosted on the Zhihu CDN stay as remote links (cross-origin hotlinking was measured
+  to work); localizing them is not forced.
