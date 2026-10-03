@@ -12,10 +12,21 @@
     border-radius: .5rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -1px rgb(0 0 0 / .06);
     overflow: hidden;
-    height: 10rem;
     display: flex;
     flex-direction: column;
     transition: transform .3s ease, box-shadow .3s ease;
+
+    /* 用 min-height 而不是 height。
+     *
+     * height: 10rem 是写死的，标题一换行就露馅：
+     * 卡片内部空间不够，margin-top: auto 推不动按钮，
+     * 于是「标题两行」的卡片按钮紧贴标题，
+     * 而「标题一行」的卡片按钮沉在底部 —— 同一页两种观感。
+     *
+     * min-height 保证短标题的卡片有同样的体量，
+     * 长标题则自然把卡片撑高，按钮始终贴底。
+     */
+    min-height: 10rem;
 }
 
 .article-card:hover {
