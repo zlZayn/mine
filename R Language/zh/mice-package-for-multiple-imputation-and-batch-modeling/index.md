@@ -14,6 +14,7 @@ library(mice)
 ```
 
 # 1. 数据与缺失值查看
+
 ```r
 data(airquality)
 # 内置空气质量数据集
@@ -30,6 +31,7 @@ airquality |> map_int(\(c) sum(is.na(c)))
 ![](assets/cols_NA.png)
 
 # 2. mice() 多重插补
+
 ```r
 set.seed(123)
 
@@ -39,6 +41,7 @@ mids <- airquality |>
 ```
 
 # 3. complete() 提取插补后的 data.frame
+
 ```r
 imputed_data_3 <- mids |> 
   complete(3)
@@ -53,6 +56,7 @@ imputed_data_3 |> map_int(\(c) sum(is.na(c)))
 ![](assets/cols_NA2.png)
 
 # 4. with() 批量建模
+
 ```r
 mira <- mids |> 
   with(lm(Ozone ~ Solar.R + Wind + Temp + Month + Day))
@@ -65,6 +69,7 @@ mira_analysis <- mira |> summary()
 ![](assets/mira_analysis.png)
 
 # 5. pool() 合并分析结果
+
 ```r
 mipo <- mira |>
   pool()
@@ -116,5 +121,3 @@ $$Ozone = -66.096 + 0.048 Solar.R - 3.012 Wind + 1.859 Temp - 2.875 Month + 0.30
 | `2lonly.mean`         | numeric      | Level - 2 class mean                     |
 | `2lonly.norm`         | numeric      | Level - 2 class normal                   |
 | `2lonly.pmm`          | any          | Level - 2 class predictive mean matching |
-
-

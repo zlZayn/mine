@@ -244,17 +244,22 @@ def migrate_zh(
     target_dir = paths.article_dir("zh", pair.slug)
     target_md = paths.article_markdown("zh", pair.slug)
 
-    # 重做时先把旧目录挪到临时位置，而不是直接删掉：
-    # 上一轮已经收进 assets/ 的图片在新一轮里要能找到，
-    # 否则会因为「源目录里没有 assets/xxx」而误报图片缺失。
-    stash: Path | None = None
-    if redo and target_dir.exists() and not dry_run:
-        stash = target_dir.with_name(target_dir.name + ".__stash__")
-        if stash.exists():
-            shutil.rmtree(stash)
-        target_dir.rename(stash)
+    # 重做时不再"把文章目录改名藏起来"做备份 ——
+    # 那样一旦中途异常，文章就从目录里消失、被当成已删除，
+    # 而且改名后的目录会被当成一篇文章混进产物。
+    #
+    # 改成：把已有 assets/ 复制到一个点开头的隐藏目录做备份。
+    #   1. 点开头 → articles._slugs_in 本就跳过它，不会被误当成文章
+    #   2. 不移动正文 → 异常时正文仍在原位
+    #   3. 重做成功后删除备份
+    backup_dir: Path | None = None
+    if redo and not dry_run and (target_dir / "assets").is_dir():
+        backup_dir = target_dir / ".assets-backup"
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        shutil.copytree(target_dir / "assets", backup_dir)
 
-    if target_md.exists():
+    if target_md.exists() and not redo:
         report.skipped.append(f"zh/{pair.slug}（已存在）")
         return
 
@@ -308,7 +313,7 @@ def migrate_zh(
         vault_root=config.vault_root,
         copy_images=not dry_run,
         extra_frontmatter={"zhihu-topics": pair.topic, "zhihu-created-at": pair.created_at},
-        existing_assets_dir=stash if stash is not None else target_dir,
+        existing_assets_dir=backup_dir if backup_dir is not None else target_dir,
     )
 
     report.images += sub_report.images_rewritten
@@ -319,17 +324,18 @@ def migrate_zh(
     if not dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
         target_md.write_text(new_text, encoding="utf-8", newline="\n")
-        # 本次没能从源目录搬运、但旧目录里有的图片，从 stash 补回来
-        if stash is not None and stash.is_dir():
-            old_assets = stash / "assets"
+
+        # 从备份里补回本轮没能重新搬运的图片（仅当目标缺失时）
+        if backup_dir is not None and backup_dir.is_dir():
             new_assets = target_dir / "assets"
-            if old_assets.is_dir():
+            for src in backup_dir.iterdir():
+                if not src.is_file():
+                    continue
                 new_assets.mkdir(parents=True, exist_ok=True)
-                for src in old_assets.iterdir():
-                    dst = new_assets / src.name
-                    if src.is_file() and not dst.exists():
-                        shutil.copy2(src, dst)
-            shutil.rmtree(stash)
+                dst = new_assets / src.name
+                if not dst.exists():
+                    shutil.copy2(src, dst)
+            shutil.rmtree(backup_dir, ignore_errors=True)
 
     report.migrated_zh.append(pair.slug)
 

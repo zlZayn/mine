@@ -4,8 +4,8 @@ slug: a-workflow-based-on-nested-data-frames
 zhihu-link: https://zhuanlan.zhihu.com/p/1944921736941384138
 zhihu-created-at: 2025-09-02 00:00
 ---
--   **Flat data frame**: Traditional table structure, where 1 row = 1 observation record and 1 column = 1 variable, making it difficult to directly carry multi-level data relationships
--   **Nested data frame**: Breaking through the limitations of flat structures, it "packages" data from the same group through **list-columns**, with 1 row = 1 group + complete subgroup data, suitable for multi-dimensional, hierarchical analysis scenarios, typically implemented using `map`
+- **Flat data frame**: Traditional table structure, where 1 row = 1 observation record and 1 column = 1 variable, making it difficult to directly carry multi-level data relationships
+- **Nested data frame**: Breaking through the limitations of flat structures, it "packages" data from the same group through **list-columns**, with 1 row = 1 group + complete subgroup data, suitable for multi-dimensional, hierarchical analysis scenarios, typically implemented using `map`
 
 ![map Function Schematic](https://pic2.zhimg.com/v2-f095b1ba1f3c06f0cb3c2c575b51f093_1440w.jpg)
 
@@ -43,8 +43,8 @@ The `data` column contains sub-data frames for each warehouse
 
 Define a function:
 
--   - Group by `品名` to summarize `总数平均` (Total Average), `毛利` (Gross Profit), and `总毛利` (Total Gross Profit)
--   - Classify `等级` (Grade) based on `平均毛利` (Average Gross Profit)
+- - Group by `品名` to summarize `总数平均` (Total Average), `毛利` (Gross Profit), and `总毛利` (Total Gross Profit)
+- - Classify `等级` (Grade) based on `平均毛利` (Average Gross Profit)
 
 ```R
 # Define function
@@ -80,7 +80,7 @@ warehouse_nested_df2 <- warehouse_nested_df |>
 
 Define another function:
 
--   - Group by `等级` to summarize `等级总数` (Grade Total), `等级平均毛利` (Grade Average Gross Profit), and `等级总毛利` (Grade Total Gross Profit)
+- - Group by `等级` to summarize `等级总数` (Grade Total), `等级平均毛利` (Grade Average Gross Profit), and `等级总毛利` (Grade Total Gross Profit)
 
 ```R
 # Define function 2

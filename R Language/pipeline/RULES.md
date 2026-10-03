@@ -76,6 +76,7 @@ mdformat --extensions frontmatter,gfm,tables \
 | 远程图床引用数量 | info | 否 |
 
 **级别含义**
+
 - `error`：`check` 非零退出，阻断提交
 - `warn`：打印但退出码仍为 0
 - `info`：仅统计
@@ -94,12 +95,14 @@ mdformat --extensions frontmatter,gfm,tables \
 | **来源映射（进 `vault-map.toml`）** | 只迁移时用 | 笔记路径、旧文件名、权威标题覆盖 |
 
 **反例（本仓历史上真实存在过的）**
+
 - 36 条文章标题链接写在 `generate_combined_cards.py` 里 → 应进 frontmatter
 - `d:\PythonDirectory\知乎\` 绝对路径 → 应从文件位置反推
 - 文章数 `9` 写死 → 应从目录扫描得出
 - 色板 12 个色值写在两个生成器里各一份 → 应进 `site.toml` 单源
 
 **正例**
+
 - `PREFIX_EN = "【R Language】"` 写在代码里是对的：它是版式契约，不是文章事实
 
 ---
@@ -112,6 +115,7 @@ mdformat --extensions frontmatter,gfm,tables \
 - 有时间戳 → 每次构建都产生噪声 diff → 无法判断"这次改动影响了什么"
 
 替代做法：
+
 - 需要"随机但有辨识度"的取值（颜色）→ 用 slug 的稳定哈希
 - 需要"当前时间"→ 不写进产物；时间属于内容，写在 frontmatter 里
 

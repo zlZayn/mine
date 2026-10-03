@@ -14,22 +14,22 @@ zhihu-created-at: 2025-09-16 01:09
 
 The Lorenz curve is used for **visualizing inequality**; the Gini index is used for **quantifying inequality**.
 
--   **Horizontal axis**: "Cumulative percentage of population" sorted from low to high resource possession
--   **Vertical axis**: "Cumulative percentage of resources" owned by the corresponding horizontal axis population
+- **Horizontal axis**: "Cumulative percentage of population" sorted from low to high resource possession
+- **Vertical axis**: "Cumulative percentage of resources" owned by the corresponding horizontal axis population
 
 **The more curved downward the Lorenz curve, the more unequal it is**
 Based on the Lorenz curve:
 
--   $S_{A}$: The area between the Lorenz curve and the "absolute equality line" (the hypotenuse of the lower triangle)
--   $S_{B}$: The area between the Lorenz curve and the "absolute inequality line" (the two right sides of the lower triangle)
+- $S_{A}$: The area between the Lorenz curve and the "absolute equality line" (the hypotenuse of the lower triangle)
+- $S_{B}$: The area between the Lorenz curve and the "absolute inequality line" (the two right sides of the lower triangle)
 
 $$Gini = \frac{S_{A}}{S_{A} + S_{B}}$$
 
 The Gini index ranges from $[0, 1]$
 **The larger the value, the more unequal**
 
-1.  **How to read the Lorenz curve**: The closer it is to the "absolute equality line" in the middle of the graph, the fairer the distribution; the more it deviates downward from this line, the more uneven the distribution.
-2.  **How to read the Gini index**: The smaller the proportion of $S_{A}$ to $(S_{A} + S_{B})$, the higher the degree of equality; the larger the proportion, the more serious the inequality.
+1. **How to read the Lorenz curve**: The closer it is to the "absolute equality line" in the middle of the graph, the fairer the distribution; the more it deviates downward from this line, the more uneven the distribution.
+2. **How to read the Gini index**: The smaller the proportion of $S_{A}$ to $(S_{A} + S_{B})$, the higher the degree of equality; the larger the proportion, the more serious the inequality.
 
 ![Diagram](https://picx.zhimg.com/v2-6cbca6aca2ed4c962def3ab0ab1a0b95_1440w.jpg)
 
@@ -60,11 +60,11 @@ Next is an example of exploring whether the `wage` distribution of these 3000 pe
 
 Calculate cumulative population proportion and cumulative `wage` proportion, which are the basic data for drawing the Lorenz curve:
 
-1.  `arrange(wage)`: **Sort from low-income to high-income groups (critical!!!!!)**
-2.  `n`: **Number of people**
-3.  `pop_accum`: **Cumulative proportion from low-income to high-income groups (because they were sorted by income earlier)**
-4.  `val_accum`: **Cumulative proportion of income from low-income to high-income groups (because they were sorted by income earlier)**
-5.  `add_row(pop_accum=0,val_accum=0,.before=1)`: **Add data for coordinate (0,0) (for drawing)**
+1. `arrange(wage)`: **Sort from low-income to high-income groups (critical!!!!!)**
+2. `n`: **Number of people**
+3. `pop_accum`: **Cumulative proportion from low-income to high-income groups (because they were sorted by income earlier)**
+4. `val_accum`: **Cumulative proportion of income from low-income to high-income groups (because they were sorted by income earlier)**
+5. `add_row(pop_accum=0,val_accum=0,.before=1)`: **Add data for coordinate (0,0) (for drawing)**
 
 ```R
 data <- Wage_df |> 

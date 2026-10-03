@@ -10,7 +10,7 @@ zhihu-created-at: 2025-09-24 22:15
 
 Two functions in R:
 
--   `nls()` (Nonlinear Least Squares):
+- `nls()` (Nonlinear Least Squares):
 
 ```R
 nls(y ~ mathematical_expression, data = dataset, start = list(param1 = initial_value1, param2 = initial_value2,...))
@@ -20,7 +20,7 @@ nls(y ~ mathematical_expression, data = dataset, start = list(param1 = initial_v
 
 $$\hat{y}=\beta_{0}+f(x_{1},\beta_{1})+f(x_{2},\beta_{2})+\dots+f(x_{n},\beta_{n})$$
 
--   `lm()` (Linear Models; Linear Least Squares):
+- `lm()` (Linear Models; Linear Least Squares):
 
 ```R
 lm(y ~ mathematical_expression, data = dataset)
@@ -69,16 +69,14 @@ nlsfit <- nls(mpg ~ k / wt + b, mtcars, start = list(k = 1, b = 0))
 summary(nlsfit)
 ```
 
-
-
 ![](https://pic1.zhimg.com/v2-30400738a70be104fefaf655cc935802_1440w.jpg)
 
 $$\hat{mpg}=\frac{45.829}{wt}+4.386$$
 
 ```R
 ggplot(mtcars, aes(wt, mpg)) +
-	geom_point() +
-	geom_line(aes(y = predict(nlsfit))) +
+ geom_point() +
+ geom_line(aes(y = predict(nlsfit))) +
         geom_segment(aes(xend = wt, yend = predict(nlsfit)), color = "red")
 ```
 
@@ -94,7 +92,7 @@ This now has a linear structure compatible with `lm()` syntax.
 
 ```R
 mtcars2 <- mtcars |>
-	mutate(wt2 = 1 / wt)
+ mutate(wt2 = 1 / wt)
 lmfit <- lm(mpg ~ wt2, mtcars2)
 
 summary(lmfit)
@@ -108,14 +106,12 @@ The estimated parameters (boxed) are exactly equal.
 
 ```R
 ggplot(mtcars2, aes(wt2, mpg)) +
-	geom_point() +
-	geom_line(aes(y = predict(lmfit))) +
+ geom_point() +
+ geom_line(aes(y = predict(lmfit))) +
         geom_segment(aes(xend = wt2, yend = predict(lmfit)), color = "red")
 ```
 
 ![](https://pic3.zhimg.com/v2-608fe87f1e5f6b355c919db9fdd92e64_1440w.jpg)
-
-
 
 This is equivalent to performing a mathematical transformation on the x-axis, and the results are completely equivalent.
 

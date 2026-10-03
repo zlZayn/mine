@@ -2,6 +2,7 @@
 zhihu-title: 【R 语言】tidymodels 的世界观：一门藏在 R 里的严谨语言
 zhihu-topics: R
 zhihu-link: https://zhuanlan.zhihu.com/p/2088737447098303432
+zhihu-created-at: 2025-09-30 12:00
 tags: zhihu-article
 ---
 ## tidymodels 的世界观：一门藏在 R 里的严谨语言
@@ -116,18 +117,18 @@ tidymodels 说：不够。
 
 核心元包 `library(tidymodels)` 只加载十余个包：
 
--   `rsample`
--   `recipes`
--   `parsnip`
--   `workflows`
--   `yardstick`
--   `tune`
--   `dials`
--   `broom`
--   `tailor`
--   `infer`
--   `modeldata`
--   `workflowsets`
+- `rsample`
+- `recipes`
+- `parsnip`
+- `workflows`
+- `yardstick`
+- `tune`
+- `dials`
+- `broom`
+- `tailor`
+- `infer`
+- `modeldata`
+- `workflowsets`
 
 其余全是“用到才加载”的插件：
 
@@ -152,18 +153,18 @@ tidymodels 说：不够。
 
 ### 优点
 
--   统一语法，轻松切换算法引擎
--   通过 `workflow` 从根本上防止数据泄露
--   模块化、可组合，与 Tidyverse 深度集成
--   评估严谨，调参系统化，适合生产级管道
+- 统一语法，轻松切换算法引擎
+- 通过 `workflow` 从根本上防止数据泄露
+- 模块化、可组合，与 Tidyverse 深度集成
+- 评估严谨，调参系统化，适合生产级管道
 
 ### 缺点
 
--   学习曲线陡峭，概念抽象且分散
--   包和函数数量庞大，新手容易吓跑
--   抽象与延迟执行增加理解成本
--   底层基于 tibble，大数据调参可能较慢
--   有批评指出其 Bootstrap 方法在统计推断上存在不一致，更适合预测建模而非严格统计推断
+- 学习曲线陡峭，概念抽象且分散
+- 包和函数数量庞大，新手容易吓跑
+- 抽象与延迟执行增加理解成本
+- 底层基于 tibble，大数据调参可能较慢
+- 有批评指出其 Bootstrap 方法在统计推断上存在不一致，更适合预测建模而非严格统计推断
 
 ### 横向对比
 

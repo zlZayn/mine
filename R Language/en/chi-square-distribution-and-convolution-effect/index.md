@@ -164,25 +164,23 @@ intermediate_data <- map_dfr(df_values, \(k) {
   # Calculate the square of each value
   square_matrix <- norm_matrix^2
   # Convert to data frame and add degrees of freedom identifier
-  as_tibble(square_matrix) |> 
-    set_names(paste0("z", 1:k, "_square")) |> 
-    mutate(df = k) |> 
+  as_tibble(square_matrix) |>
+    set_names(paste0("z", 1:k, "_square")) |>
+    mutate(df = k) |>
     relocate(df)
 })
 
-
 # Step 2: Calculate chi-square values (sum of squares) based on intermediate data
-data <- intermediate_data |> 
+data <- intermediate_data |>
   # Group by degrees of freedom and sum the squared value columns for each group (ignore NA since different degrees of freedom have different numbers of columns)
-  group_by(df) |> 
+  group_by(df) |>
   mutate(
     value = rowSums(across(starts_with("z")), na.rm = TRUE)  # Sum all z*_square columns
-  ) |> 
-  ungroup() |> 
+  ) |>
+  ungroup() |>
   # Keep only chi-square values and degrees of freedom columns
-  select(value, df) |> 
+  select(value, df) |>
   mutate(df = factor(df))
-
 
 # Plot density chart
 ggplot(data, aes(x = value)) +
@@ -334,7 +332,7 @@ two_dice <- expand.grid(die1 = 1:6, die2 = 1:6) %>%
 ggplot(two_dice, aes(x = sum, y = prob)) +
   geom_col(fill = "lightgreen", width = 0.7) +
   scale_x_continuous(breaks = 2:12) +
-  labs(title = "Sum of Two Dice: Triangular Distribution", 
+  labs(title = "Sum of Two Dice: Triangular Distribution",
        x = "Sum of Points", y = "Probability") +
   theme_bw()
 
@@ -346,7 +344,7 @@ three_dice <- expand.grid(die1 = 1:6, die2 = 1:6, die3 = 1:6) %>%
 
 ggplot(three_dice, aes(x = sum, y = prob)) +
   geom_col(fill = "orange", width = 0.7) +
-  labs(title = "Sum of Three Dice: Beginning to Show Bell Shape", 
+  labs(title = "Sum of Three Dice: Beginning to Show Bell Shape",
        x = "Sum of Points", y = "Probability") +
   theme_bw()
 
@@ -370,7 +368,7 @@ ten_dice_df <- tibble(
 
 ggplot(ten_dice_df, aes(x = sum, y = prob)) +
   geom_col(fill = "purple", alpha = 0.7) +
-  labs(title = "Sum of 10 Dice: Approaching Normal Distribution", 
+  labs(title = "Sum of 10 Dice: Approaching Normal Distribution",
        x = "Sum of Points", y = "Probability") +
   theme_bw()
 )

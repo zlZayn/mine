@@ -6,9 +6,9 @@ zhihu-created-at: 2025-09-01 00:00
 ---
 **Anonymous Functions**
 
-1.  Concise code: No need for naming, directly embed logic, reduce redundancy
-2.  Use and discard: Suitable for one-time simple processing, no need to maintain functions separately
-3.  Clear context: Logic presented nearby, avoiding jumping to view definitions
+1. Concise code: No need for naming, directly embed logic, reduce redundancy
+2. Use and discard: Suitable for one-time simple processing, no need to maintain functions separately
+3. Clear context: Logic presented nearby, avoiding jumping to view definitions
 
 * * *
 
@@ -36,8 +36,8 @@ A concise syntax introduced in R 4.1.0+, replacing `function()` with `\()`
 
 A special syntax supported by the `purrr` package, formula style, starting with `~`, **no need to explicitly declare parameters**:
 
--   Single parameter is referred to as `.`
--   Two parameters are referred to as `.x`/`.y` or `..1`/`..2`
+- Single parameter is referred to as `.`
+- Two parameters are referred to as `.x`/`.y` or `..1`/`..2`
 
 ## Single Parameter
 
@@ -106,8 +106,8 @@ demo2_df <- tibble(
 )
 ```
 
--   scores (subject scores)
--   full_scores (subject full marks)
+- scores (subject scores)
+- full_scores (subject full marks)
 
 *Task: Calculate whether the subject is passed:*
 
@@ -189,18 +189,18 @@ tax_rates <- c(0.1, 0.1, 0.13, 0.1, 0.08, 0.13)
 min_profit <- c(10, 20, 35, 8, 5, 22)
 ```
 
--   id (product ID)
--   cost (cost)
--   base_price (base selling price)
--   discount_rates (discount rates)
--   tax_rates (tax rates)
--   min_profit (minimum profit requirement)
+- id (product ID)
+- cost (cost)
+- base_price (base selling price)
+- discount_rates (discount rates)
+- tax_rates (tax rates)
+- min_profit (minimum profit requirement)
 
 Tasks:
 
-1.  `Final price = Base price × Discount rate × (1 + Tax rate)`
-2.  `Profit = Final price - Cost`
-3.  If `Profit ≥ Minimum profit requirement`, then "符合要求" (Meets requirements), otherwise "利润不足" (Insufficient profit)
+1. `Final price = Base price × Discount rate × (1 + Tax rate)`
+2. `Profit = Final price - Cost`
+3. If `Profit ≥ Minimum profit requirement`, then "符合要求" (Meets requirements), otherwise "利润不足" (Insufficient profit)
 
 ```R
 result3_1 <- pmap_chr(

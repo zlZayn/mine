@@ -9,7 +9,7 @@
     "MD012": { "maximum": 1 },
     "MD024": { "siblings_only": true },
     "MD007": { "indent": 2 },
-    "MD029": { "style": "one" },
+    "MD029": { "style": "ordered" },
     "MD030": {
       "ul_single": 1,
       "ol_single": 1,
@@ -23,18 +23,14 @@
 
   "globs": [
     "R Language/en/**/*.md",
-    "R Language/zh/**/*.md",
-    "AGENTS.md",
-    "ARCHITECTURE.md",
-    "README.md",
-    "_archive/**/*.md",
-    "R Language/pipeline/**/*.md"
+    "R Language/zh/**/*.md"
   ],
 
   "ignores": [
     "**/*.html",
     "_site/**",
     "**/.venv/**",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "_archive/**"
   ]
 }

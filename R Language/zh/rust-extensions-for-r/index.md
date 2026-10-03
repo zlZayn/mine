@@ -2,6 +2,7 @@
 zhihu-title: 【R 语言】用 Rust 给 R 写扩展：完整实践指南
 zhihu-topics: R
 zhihu-link: https://zhuanlan.zhihu.com/p/2087557727866320879
+zhihu-created-at: 2025-09-27 12:00
 tags: zhihu-article
 ---
 ## 用 Rust 给 R 写扩展：完整实践指南
@@ -31,10 +32,10 @@ rextendr
 
 在开始之前，确保三样东西就位：
 
-1.  **Rust 工具链**：从 [Rust Programming Language](https://link.zhihu.com/?target=http%3A//rust-lang.org) 安装 `rustup`。当前 extendr 的最低支持 Rust 版本（MSRV）是 1.65.0，这是为了确保 CRAN 合规。Windows 用户需要额外添加 GNU 工具链：`rustup target add x86_64-pc-windows-gnu`
-2.  **R 版本**：推荐使用 R >= 4.2.0
-3.  **R 包**：在 R 中安装 `install.packages(c("rextendr", "usethis", "devtools"))`
-4.  **一键体检**：运行以下命令，全部绿色对勾即可开始：
+1. **Rust 工具链**：从 [Rust Programming Language](https://link.zhihu.com/?target=http%3A//rust-lang.org) 安装 `rustup`。当前 extendr 的最低支持 Rust 版本（MSRV）是 1.65.0，这是为了确保 CRAN 合规。Windows 用户需要额外添加 GNU 工具链：`rustup target add x86_64-pc-windows-gnu`
+2. **R 版本**：推荐使用 R >= 4.2.0
+3. **R 包**：在 R 中安装 `install.packages(c("rextendr", "usethis", "devtools"))`
+4. **一键体检**：运行以下命令，全部绿色对勾即可开始：
 
 ```r
 rextendr::rust_sitrep()
@@ -110,12 +111,12 @@ mypkg/
 
 **关键文件的作用**：
 
--   **`R/extendr-wrappers.R`** —— R 端的接口层。每次运行 `devtools::document()` 时自动重新生成，里面是你 Rust 函数的 R 包装版本。**永远不要手动编辑**。
--   **`src/entrypoint.c`** —— R 加载动态库时的 C 入口点。R 不认识 Rust，但认识 C。
--   **`src/Makevars.in`** —— 告诉 R 的构建系统：编译这个包时，先调用 cargo 编译 Rust，再把结果链接进来。
--   **`src/rust/Cargo.toml`** —— Rust 侧的“DESCRIPTION”。crate 同时以 `rlib`（供 document 二进制内省导出）和 `staticlib`（链接进 R 包）两种形态构建。`[[bin]]` 条目注册了 `document.rs`，用于在构建时生成 R 包装函数。
--   **`src/rust/document.rs`** —— 构建时运行的工具，扫描 `#[extendr]` 标记的函数，生成 `R/extendr-wrappers.R`。
--   **`src/rust/src/lib.rs`** —— 你的 Rust 代码主文件。`extendr_module!` 宏控制哪些函数、impl 块和子模块暴露给 R。**每个你希望 R 可用的函数都必须在 `extendr_module!` 中列出**。
+- **`R/extendr-wrappers.R`** —— R 端的接口层。每次运行 `devtools::document()` 时自动重新生成，里面是你 Rust 函数的 R 包装版本。**永远不要手动编辑**。
+- **`src/entrypoint.c`** —— R 加载动态库时的 C 入口点。R 不认识 Rust，但认识 C。
+- **`src/Makevars.in`** —— 告诉 R 的构建系统：编译这个包时，先调用 cargo 编译 Rust，再把结果链接进来。
+- **`src/rust/Cargo.toml`** —— Rust 侧的“DESCRIPTION”。crate 同时以 `rlib`（供 document 二进制内省导出）和 `staticlib`（链接进 R 包）两种形态构建。`[[bin]]` 条目注册了 `document.rs`，用于在构建时生成 R 包装函数。
+- **`src/rust/document.rs`** —— 构建时运行的工具，扫描 `#[extendr]` 标记的函数，生成 `R/extendr-wrappers.R`。
+- **`src/rust/src/lib.rs`** —— 你的 Rust 代码主文件。`extendr_module!` 宏控制哪些函数、impl 块和子模块暴露给 R。**每个你希望 R 可用的函数都必须在 `extendr_module!` 中列出**。
 
 ### 五、开发循环：写代码、编译、加载
 
@@ -308,11 +309,11 @@ CRAN 非常重视可移植性。一个 R 包必须包含构建它所需的一切
 
 10.2 注意事项
 
--   `vendor_pkgs()` 已被弃用，请使用 `vendor_crates()`
--   根据依赖的数量，`vendor.tar.xz` 可能达到数 MB 级别
--   在 `cran-comments.md` 中注明包的大小，例如：“Tarball is 4.7mb due to vendored rust dependencies”
--   当前 CRAN 的 MSRV 为 1.81，你的包必须满足这个要求
--   CRAN 不支持 nightly 特性
+- `vendor_pkgs()` 已被弃用，请使用 `vendor_crates()`
+- 根据依赖的数量，`vendor.tar.xz` 可能达到数 MB 级别
+- 在 `cran-comments.md` 中注明包的大小，例如：“Tarball is 4.7mb due to vendored rust dependencies”
+- 当前 CRAN 的 MSRV 为 1.81，你的包必须满足这个要求
+- CRAN 不支持 nightly 特性
 
 ### 十一、高级特性
 
@@ -339,11 +340,11 @@ rextendr::use_crate("tokio", features = "rt-multi-thread")
 
 extendr 已经有一批生产落地的 R 包，覆盖多个领域：
 
--   **dialrs**：解析电话号码的 R 包
--   **arcgisgeocode**：地理编码工具
--   **rsgeo**：地理空间几何操作
--   **arcgisplaces**：地点搜索
--   **salso**、**caviarpd**、**fangs**：CRAN 上已发布的 Rust 驱动 R 包
+- **dialrs**：解析电话号码的 R 包
+- **arcgisgeocode**：地理编码工具
+- **rsgeo**：地理空间几何操作
+- **arcgisplaces**：地点搜索
+- **salso**、**caviarpd**、**fangs**：CRAN 上已发布的 Rust 驱动 R 包
 
 一项针对野生猪非洲猪瘟（ASF）建模的研究展示了 extendr 的实际价值：研究者用 Rust 创建了一个自定义的稀疏缓存友好数据结构来追踪感染压力，这是 R 中无法实现的数据结构。extendr 让这个复杂数据结构能与原生 R 代码和数据结构无缝共存，在计算性能上带来了显著提升。
 

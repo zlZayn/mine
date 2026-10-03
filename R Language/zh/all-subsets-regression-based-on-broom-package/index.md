@@ -6,18 +6,26 @@ zhihu-created-at: 2025-10-03 14:24
 ---
 实际不是真的全子集，否则算力要求巨大，并且模型过于复杂且没有可解释性，得不偿失。
 所以，我们应当手动设置（本文用的函数）参数 `main_terms_spec`，以控制主效应数量。
+
 # 选定响应变量
+
 预先观察（略），使响应变量符合模型假设，此处作对数变换：
+
 ```r
 dataset <- mtcars |>
   mutate(log_mpg = log(mpg), .keep = "unused")
 ```
+
 取响应变量（因变量）为 `log_mpg`：
+
 ```r
 target <- "log_mpg"
 ```
+
 # 生成模型的全子集公式
+
 这里用我写的一个函数（置于文末），生成模型的全子集公式（数据框形式）：
+
 ```r
 formulas <- generate_model_formulas(data = dataset,
                                     target = target,
@@ -25,16 +33,20 @@ formulas <- generate_model_formulas(data = dataset,
                                     # 还可以写1:3、2:4等
 # 需注意“模型数量”随“主效应数”和“自变量数”爆炸式增长
 ```
+
 ![](assets/formulas_2.png)
+
 # 批量建模
+
 `map()` 批量建模并结合 `broom` 稍稍处理：
+
 ```r
 model_results <- formulas |>
   mutate(
     # 批量建模
     model = map(formula, \(f) possibly(lm, tibble())(as.formula(f), dataset)),
     # 批量总结
-	Glance = map(model, glance),
+ Glance = map(model, glance),
     Tidy = map(model, tidy),
     Augment = map(model, augment)
   ) |>
@@ -50,12 +62,14 @@ model_results <- formulas |>
            Tidy,
            Augment)
 ```
+
 ![](assets/results_2.png)
 **AIC（Akaike Information Criterion，赤池信息准则）**是一个重要的指标，用于衡量模型的复杂度和拟合优良性。AIC的核心思想是寻找既能够良好拟合数据又不过于复杂的模型。$AIC$ 的计算公式为： $$AIC = 2k - 2ln(L)$$其中 $k$ 是模型中参数的数量，$L$ 是模型的似然函数。
 **AIC值越小，表示模型越优**。
 
 ---
 用于生成模型的全子集公式的函数：
+
 ```r
 generate_model_formulas <- function(data, target, main_terms_spec) {
   # 校验目标变量存在性

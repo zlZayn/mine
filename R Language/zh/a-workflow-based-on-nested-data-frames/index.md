@@ -36,6 +36,7 @@ warehouse_nested_df <- demo_df |>
 ![](assets/warehouse_nested_df.png)
 
 定义一个函数：
+
 - 根据`品名`分组汇总`总数平均`、`毛利`和`总毛利`
 - 根据`平均毛利`划分`等级`
 
@@ -72,6 +73,7 @@ warehouse_nested_df2 <- warehouse_nested_df |>
 ![](assets/warehouse_nested_df2-2_31.png)
 
 再定义一个函数：
+
 - 根据`等级`分组汇总`等级总数`、`等级平均毛利`和`等级总毛利`
 
 ```r
@@ -114,6 +116,7 @@ warehouse_nested_df3 <- warehouse_nested_df2 |>
 ![](assets/drugname_result_xlsx.png)
 
 附：
+
 ```r
 export_all_nested_to_xlsx <- function(nested_df, output_dir = ".") {
   # 检查必要包

@@ -115,18 +115,18 @@ The very first line of the official cheatsheet makes it clear: it is not a funct
 
 The core meta-package `library(tidymodels)` loads only a dozen or so packages:
 
--   `rsample`
--   `recipes`
--   `parsnip`
--   `workflows`
--   `yardstick`
--   `tune`
--   `dials`
--   `broom`
--   `tailor`
--   `infer`
--   `modeldata`
--   `workflowsets`
+- `rsample`
+- `recipes`
+- `parsnip`
+- `workflows`
+- `yardstick`
+- `tune`
+- `dials`
+- `broom`
+- `tailor`
+- `infer`
+- `modeldata`
+- `workflowsets`
 
 Everything else is a plugin you load "only when you need it":
 
@@ -151,18 +151,18 @@ The right way to read it: treat the cheatsheet as a dictionary, not as a textboo
 
 ### Strengths
 
--   Unified syntax, easy switching between algorithm engines
--   Fundamentally prevents data leakage through `workflow`
--   Modular and composable, deeply integrated with the Tidyverse
--   Rigorous evaluation and systematic tuning, suited to production-grade pipelines
+- Unified syntax, easy switching between algorithm engines
+- Fundamentally prevents data leakage through `workflow`
+- Modular and composable, deeply integrated with the Tidyverse
+- Rigorous evaluation and systematic tuning, suited to production-grade pipelines
 
 ### Weaknesses
 
--   Steep learning curve, with abstract and scattered concepts
--   A huge number of packages and functions, easy to scare off newcomers
--   Abstraction and deferred execution add to the cost of understanding
--   Built on tibble underneath, so tuning on large data can be slow
--   Some critics point out that its bootstrap methods are statistically inconsistent for inference, making it better suited to predictive modeling than to strict statistical inference
+- Steep learning curve, with abstract and scattered concepts
+- A huge number of packages and functions, easy to scare off newcomers
+- Abstraction and deferred execution add to the cost of understanding
+- Built on tibble underneath, so tuning on large data can be slow
+- Some critics point out that its bootstrap methods are statistically inconsistent for inference, making it better suited to predictive modeling than to strict statistical inference
 
 ### Side-by-side comparison
 

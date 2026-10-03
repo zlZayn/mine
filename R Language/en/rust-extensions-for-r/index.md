@@ -30,10 +30,10 @@ rextendr
 
 Before you start, make sure three things are in place:
 
-1.  **Rust toolchain**: install `rustup` from [Rust Programming Language](https://link.zhihu.com/?target=http%3A//rust-lang.org). extendr's current minimum supported Rust version (MSRV) is 1.65.0, which keeps it CRAN-compliant. Windows users need to add the GNU toolchain as well: `rustup target add x86_64-pc-windows-gnu`
-2.  **R version**: R >= 4.2.0 is recommended
-3.  **R packages**: install `install.packages(c("rextendr", "usethis", "devtools"))` in R
-4.  **One-shot health check**: run the command below — all green checkmarks and you can begin:
+1. **Rust toolchain**: install `rustup` from [Rust Programming Language](https://link.zhihu.com/?target=http%3A//rust-lang.org). extendr's current minimum supported Rust version (MSRV) is 1.65.0, which keeps it CRAN-compliant. Windows users need to add the GNU toolchain as well: `rustup target add x86_64-pc-windows-gnu`
+2. **R version**: R >= 4.2.0 is recommended
+3. **R packages**: install `install.packages(c("rextendr", "usethis", "devtools"))` in R
+4. **One-shot health check**: run the command below — all green checkmarks and you can begin:
 
 ```r
 rextendr::rust_sitrep()
@@ -109,12 +109,12 @@ mypkg/
 
 **What the key files do**:
 
--   **`R/extendr-wrappers.R`** —— the interface layer on the R side. It is regenerated automatically every time you run `devtools::document()`, and it holds the R wrappers for your Rust functions. **Never edit it by hand**.
--   **`src/entrypoint.c`** —— the C entry point R uses when it loads the dynamic library. R does not know Rust, but it knows C.
--   **`src/Makevars.in`** —— tells R's build system: when compiling this package, first invoke cargo to compile the Rust, then link the result in.
--   **`src/rust/Cargo.toml`** —— the Rust-side "DESCRIPTION". The crate is built in two forms at once: `rlib` (so the document binary can introspect the exports) and `staticlib` (linked into the R package). The `[[bin]]` entry registers `document.rs`, which generates the R wrapper functions at build time.
--   **`src/rust/document.rs`** —— a build-time tool that scans functions marked with `#[extendr]` and generates `R/extendr-wrappers.R`.
--   **`src/rust/src/lib.rs`** —— your main Rust source file. The `extendr_module!` macro controls which functions, impl blocks, and submodules are exposed to R. **Every function you want available from R must be listed in `extendr_module!`**.
+- **`R/extendr-wrappers.R`** —— the interface layer on the R side. It is regenerated automatically every time you run `devtools::document()`, and it holds the R wrappers for your Rust functions. **Never edit it by hand**.
+- **`src/entrypoint.c`** —— the C entry point R uses when it loads the dynamic library. R does not know Rust, but it knows C.
+- **`src/Makevars.in`** —— tells R's build system: when compiling this package, first invoke cargo to compile the Rust, then link the result in.
+- **`src/rust/Cargo.toml`** —— the Rust-side "DESCRIPTION". The crate is built in two forms at once: `rlib` (so the document binary can introspect the exports) and `staticlib` (linked into the R package). The `[[bin]]` entry registers `document.rs`, which generates the R wrapper functions at build time.
+- **`src/rust/document.rs`** —— a build-time tool that scans functions marked with `#[extendr]` and generates `R/extendr-wrappers.R`.
+- **`src/rust/src/lib.rs`** —— your main Rust source file. The `extendr_module!` macro controls which functions, impl blocks, and submodules are exposed to R. **Every function you want available from R must be listed in `extendr_module!`**.
 
 ### V. The Development Loop: Write, Compile, Load
 
@@ -307,11 +307,11 @@ CRAN cares a great deal about portability. An R package must contain everything 
 
 10.2 Things to watch out for
 
--   `vendor_pkgs()` is deprecated, use `vendor_crates()` instead
--   Depending on the number of dependencies, `vendor.tar.xz` can reach several MB
--   Note the package size in `cran-comments.md`, for example: "Tarball is 4.7mb due to vendored rust dependencies"
--   The current CRAN MSRV is 1.81, and your package must satisfy it
--   CRAN does not support nightly features
+- `vendor_pkgs()` is deprecated, use `vendor_crates()` instead
+- Depending on the number of dependencies, `vendor.tar.xz` can reach several MB
+- Note the package size in `cran-comments.md`, for example: "Tarball is 4.7mb due to vendored rust dependencies"
+- The current CRAN MSRV is 1.81, and your package must satisfy it
+- CRAN does not support nightly features
 
 ### XI. Advanced Features
 
@@ -338,11 +338,11 @@ As of rextendr 0.4, every extendr-powered R package is WebR-compatible out of th
 
 extendr already has a set of production R packages spanning several domains:
 
--   **dialrs**: an R package for parsing phone numbers
--   **arcgisgeocode**: geocoding tools
--   **rsgeo**: geospatial geometry operations
--   **arcgisplaces**: place search
--   **salso**, **caviarpd**, **fangs**: Rust-powered R packages already published on CRAN
+- **dialrs**: an R package for parsing phone numbers
+- **arcgisgeocode**: geocoding tools
+- **rsgeo**: geospatial geometry operations
+- **arcgisplaces**: place search
+- **salso**, **caviarpd**, **fangs**: Rust-powered R packages already published on CRAN
 
 A study modeling African swine fever (ASF) in wild boar demonstrates extendr's practical value: the researchers used Rust to build a custom sparse, cache-friendly data structure for tracking infection pressure — a data structure that is not achievable in R. extendr let this complex data structure coexist seamlessly with native R code and data structures, delivering a significant boost in computational performance.
 

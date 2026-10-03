@@ -25,9 +25,9 @@ The `mice` package (Multivariate Imputation by Chained Equations) is a tool pack
 
 The `mice` package mainly has the following functions:
 
-1.  **Build prediction models for variables with missing values**
-2.  **Generate multiple imputed datasets**
-3.  **Subsequent batch modeling and integration of results**
+1. **Build prediction models for variables with missing values**
+2. **Generate multiple imputed datasets**
+3. **Subsequent batch modeling and integration of results**
 
 * * *
 
@@ -137,8 +137,6 @@ mipo_analysis <- mipo |> summary()
 From the table, we can get the **final linear regression equation**
 
 $$Ozone = -66.096 + 0.048 Solar.R - 3.012 Wind + 1.859 Temp - 2.875 Month + 0.304 Day$$
-
-
 
 Types of **R objects** in this article
 
