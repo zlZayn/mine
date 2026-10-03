@@ -5,8 +5,6 @@
 > 我在给自己搭一个安静的小角落，放我的内容与知识。
 > 愿它们一直待在我看得见的地方，永不丢失。
 
-**站点入口：[zlzayn.github.io/mine](https://zlzayn.github.io/mine/)**
-
 ---
 
 ## 这是什么
@@ -21,6 +19,8 @@
 ## 仓库里有什么
 
 ### `R Language/` —— 专栏本体
+
+**站点入口：[zlzayn.github.io/mine](https://zlzayn.github.io/mine/)**
 
 | 路径 | 内容 |
 | --- | --- |

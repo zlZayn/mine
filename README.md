@@ -5,8 +5,6 @@
 > A cozy little nook for my content and knowledge.
 > May they always stay here where I can see them, and never get lost.
 
-**Browse the site: [zlzayn.github.io/mine](https://zlzayn.github.io/mine/)**
-
 ---
 
 ## What this is
@@ -22,6 +20,8 @@ the English Markdown lives in this repository, the Chinese original lives on Zhi
 ## What's inside
 
 ### `R Language/` — the column
+
+**Browse the site: [zlzayn.github.io/mine](https://zlzayn.github.io/mine/)**
 
 | Path | Holds |
 | --- | --- |
