@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【R Language】mice Package for Multiple Imputation and Batch Modeling</title><script>
+MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] } };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script><style>
+/* =============================================================================
+   文章阅读页样式（由 pipeline 渲染英文 Markdown 时使用）
+   目标：让 GitHub Pages 上的英文文章可读，不追求华丽。
+   ============================================================================= */
+
+:root {
+    --fg: #1f2937;
+    --fg-muted: #6b7280;
+    --bg: #f9fafb;
+    --code-bg: #f3f4f6;
+    --border: #e5e7eb;
+    --accent: #0f172a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, &#34;Segoe UI&#34;, &#34;Helvetica Neue&#34;,
+                 &#34;PingFang SC&#34;, &#34;Hiragino Sans GB&#34;, &#34;Microsoft YaHei&#34;, sans-serif;
+    line-height: 1.75;
+    font-size: 16px;
+}
+
+.article-wrap {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+}
+
+/* ---- 返回专栏首页 ---- */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    margin-bottom: 2rem;
+    padding: .375rem 1rem;
+    border-radius: 9999px;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--fg);
+    text-decoration: none;
+    transition: all .2s ease-in-out;
+}
+
+.back-link:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgb(0 0 0 / .15);
+}
+
+/* ---- 标题层级 ---- */
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.35;
+    margin: 2.5rem 0 1rem;
+    font-weight: 700;
+}
+
+h1 { font-size: 1.875rem; margin-top: 0; }
+h2 { font-size: 1.5rem; padding-bottom: .375rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.0625rem; }
+
+p { margin: 1rem 0; }
+
+a { color: #1d4ed8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- 图片：限制宽度并居中 ---- */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: .375rem;
+}
+
+/* ---- 代码 ---- */
+code {
+    background: var(--code-bg);
+    padding: .125rem .375rem;
+    border-radius: .25rem;
+    font-size: .875em;
+    font-family: &#34;SFMono-Regular&#34;, Consolas, &#34;Liberation Mono&#34;, Menlo, monospace;
+}
+
+pre {
+    background: var(--code-bg);
+    padding: 1rem 1.25rem;
+    border-radius: .5rem;
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+}
+
+pre code {
+    background: none;
+    padding: 0;
+    font-size: .875rem;
+    line-height: 1.6;
+}
+
+/* ---- 表格 ---- */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.5rem 0;
+    font-size: .9375rem;
+    display: block;
+    overflow-x: auto;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: .5rem .75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+th { background: var(--code-bg); font-weight: 600; }
+
+/* ---- 引用块 ---- */
+blockquote {
+    margin: 1.25rem 0;
+    padding: .125rem 1.25rem;
+    border-left: 4px solid var(--border);
+    color: var(--fg-muted);
+}
+
+blockquote p { margin: .75rem 0; }
+
+/* ---- 列表 ---- */
+ul, ol { padding-left: 1.75rem; margin: 1rem 0; }
+li { margin: .375rem 0; }
+
+/* ---- 分隔线 ---- */
+hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+}
+
+/* ---- 页脚 ---- */
+.article-footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: .875rem;
+    color: var(--fg-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* ---- 数学公式（MathJax 渲染失败时不要闪成裸 $） ---- */
+mjx-container { overflow-x: auto; overflow-y: hidden; }
+
+pre { line-height: 125%; }
+td.linenos .normal { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight { background: #f0f0f0; }
+.highlight .c { color: #60A0B0; font-style: italic } /* Comment */
+.highlight .err { border: 1px solid #F00 } /* Error */
+.highlight .k { color: #007020; font-weight: bold } /* Keyword */
+.highlight .o { color: #666 } /* Operator */
+.highlight .ch { color: #60A0B0; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #60A0B0; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #007020 } /* Comment.Preproc */
+.highlight .cpf { color: #60A0B0; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #60A0B0; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #60A0B0; background-color: #FFF0F0 } /* Comment.Special */
+.highlight .gd { color: #A00000 } /* Generic.Deleted */
+.highlight .ge { font-style: italic } /* Generic.Emph */
+.highlight .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.highlight .gr { color: #F00 } /* Generic.Error */
+.highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #00A000 } /* Generic.Inserted */
+.highlight .go { color: #888 } /* Generic.Output */
+.highlight .gp { color: #C65D09; font-weight: bold } /* Generic.Prompt */
+.highlight .gs { font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #04D } /* Generic.Traceback */
+.highlight .kc { color: #007020; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #007020 } /* Keyword.Pseudo */
+.highlight .kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #902000 } /* Keyword.Type */
+.highlight .m { color: #40A070 } /* Literal.Number */
+.highlight .s { color: #4070A0 } /* Literal.String */
+.highlight .na { color: #4070A0 } /* Name.Attribute */
+.highlight .nb { color: #007020 } /* Name.Builtin */
+.highlight .nc { color: #0E84B5; font-weight: bold } /* Name.Class */
+.highlight .no { color: #60ADD5 } /* Name.Constant */
+.highlight .nd { color: #555; font-weight: bold } /* Name.Decorator */
+.highlight .ni { color: #D55537; font-weight: bold } /* Name.Entity */
+.highlight .ne { color: #007020 } /* Name.Exception */
+.highlight .nf { color: #06287E } /* Name.Function */
+.highlight .nl { color: #002070; font-weight: bold } /* Name.Label */
+.highlight .nn { color: #0E84B5; font-weight: bold } /* Name.Namespace */
+.highlight .nt { color: #062873; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #BB60D5 } /* Name.Variable */
+.highlight .ow { color: #007020; font-weight: bold } /* Operator.Word */
+.highlight .w { color: #BBB } /* Text.Whitespace */
+.highlight .mb { color: #40A070 } /* Literal.Number.Bin */
+.highlight .mf { color: #40A070 } /* Literal.Number.Float */
+.highlight .mh { color: #40A070 } /* Literal.Number.Hex */
+.highlight .mi { color: #40A070 } /* Literal.Number.Integer */
+.highlight .mo { color: #40A070 } /* Literal.Number.Oct */
+.highlight .sa { color: #4070A0 } /* Literal.String.Affix */
+.highlight .sb { color: #4070A0 } /* Literal.String.Backtick */
+.highlight .sc { color: #4070A0 } /* Literal.String.Char */
+.highlight .dl { color: #4070A0 } /* Literal.String.Delimiter */
+.highlight .sd { color: #4070A0; font-style: italic } /* Literal.String.Doc */
+.highlight .s2 { color: #4070A0 } /* Literal.String.Double */
+.highlight .se { color: #4070A0; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #4070A0 } /* Literal.String.Heredoc */
+.highlight .si { color: #70A0D0; font-style: italic } /* Literal.String.Interpol */
+.highlight .sx { color: #C65D09 } /* Literal.String.Other */
+.highlight .sr { color: #235388 } /* Literal.String.Regex */
+.highlight .s1 { color: #4070A0 } /* Literal.String.Single */
+.highlight .ss { color: #517918 } /* Literal.String.Symbol */
+.highlight .bp { color: #007020 } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #06287E } /* Name.Function.Magic */
+.highlight .vc { color: #BB60D5 } /* Name.Variable.Class */
+.highlight .vg { color: #BB60D5 } /* Name.Variable.Global */
+.highlight .vi { color: #BB60D5 } /* Name.Variable.Instance */
+.highlight .vm { color: #BB60D5 } /* Name.Variable.Magic */
+.highlight .il { color: #40A070 } /* Literal.Number.Integer.Long */
+</style>
+</head>
+<body>
+<div class="article-wrap">
+<a class="back-link" href="../../../index.html">&#8592; R</a>
+<article>
+&lt;p&gt;&lt;img alt=&#34;mice r package logo&#34; src=&#34;https://pica.zhimg.com/v2-517d187895cdc2734f566b6918daa350_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;o&#34;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;packageVersion&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;mice&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;# mice package version used in this article&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;‘&lt;span class=&#34;m&#34;&gt;3.18&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;0&lt;/span&gt;’
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;MICE Method Schematic&#34; src=&#34;https://pic2.zhimg.com/v2-6c24556374d7eae28580a9663eec1de9_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;mice&lt;/code&gt; package (Multivariate Imputation by Chained Equations) is a tool package in R for handling missing values. Its core function is to generate multiple complete datasets (rather than a single imputation result) through the &lt;strong&gt;chained equations multiple imputation method&lt;/strong&gt;. Compared to simple imputation (such as mean imputation), it better preserves data distribution and variable relationships, making it particularly suitable for complex missing patterns.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Types of special R objects:&lt;/strong&gt;&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Special R Object Type&lt;/th&gt;
+&lt;th&gt;Full Name&lt;/th&gt;
+&lt;th&gt;Source&lt;/th&gt;
+&lt;th&gt;Function&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;mids&lt;/td&gt;
+&lt;td&gt;Multiply Imputed Data Set&lt;/td&gt;
+&lt;td&gt;Generated by mice()&lt;/td&gt;
+&lt;td&gt;Stores multiple imputed datasets&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mira&lt;/td&gt;
+&lt;td&gt;Multiply Imputed Repeated Analyses&lt;/td&gt;
+&lt;td&gt;Analysis of mids with with()&lt;/td&gt;
+&lt;td&gt;Stores separate analysis results for each dataset&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mipo&lt;/td&gt;
+&lt;td&gt;Multiply Imputed Pooled Results&lt;/td&gt;
+&lt;td&gt;Merging mira with pool()&lt;/td&gt;
+&lt;td&gt;Merges to get final statistics&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;The &lt;code&gt;mice&lt;/code&gt; package mainly has the following functions:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Build prediction models for variables with missing values&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Generate multiple imputed datasets&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Subsequent batch modeling and integration of results&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Multiple imputation of missing data&lt;/strong&gt; → &lt;strong&gt;Batch modeling on multiple datasets&lt;/strong&gt; → &lt;strong&gt;Merge model results&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;nf&#34;&gt;library&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;tidyverse&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;nf&#34;&gt;library&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mice&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2&gt;1. Data and Missing Value Viewing&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;nf&#34;&gt;data&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;airquality&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Built-in air quality dataset&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;airquality&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;glimpse&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Preview the data structure of airquality&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;airquality&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;map_int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;\&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;sum&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;is.na&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)))&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Check missing values in each column&lt;/span&gt;
+
+&lt;span class=&#34;nf&#34;&gt;md.pattern&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;airquality&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Count and visualize missing value patterns&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic4.zhimg.com/v2-d4c3a10c3f51c4b8d8b55eca660d5cf3_1440w.jpg&#34;&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic2.zhimg.com/v2-cd9463c43dd9608965d97f00d3b18af3_1440w.jpg&#34;&gt;&lt;img alt=&#34;md.pattern()&#34; src=&#34;https://pic3.zhimg.com/v2-3010c7bab286c18304673298561bba60_1440w.jpg&#34;&gt;| md.pattern() Result Description | Interpretation |
+| ------------------------------- | -------------- |
+| Number on the far left of each row | Total frequency of this pattern |
+| Middle 1 (blue) and 0 (red) | Indicate whether each column (variable) in each row (observation) has missing values under this pattern |
+| Number on the far right of each row | Total number of missing values per row (observation) under this pattern |
+| Number at the bottom of each column | Total number of missing values per column (variable) |&lt;/p&gt;
+&lt;h2&gt;2. mice() Multiple Imputation&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;nf&#34;&gt;set.seed&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;123&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;mids&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;airquality&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;mice&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;m&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;m&#34;&gt;5&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;method&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;pmm&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Predictive mean matching, 5 multiple imputations&lt;/span&gt;
+
+&lt;span class=&#34;nf&#34;&gt;stripplot&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mids&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;chl&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Draw strip plot of original data and 5 imputed data with missing value markers&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;Red indicates imputation markers&#34; src=&#34;https://pic1.zhimg.com/v2-813b746bb0dec29a591f74a791bb9892_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;h2&gt;3. complete() Extract Imputed data.frame&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;n&#34;&gt;imputed_data_3&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mids&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;complete&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;m&#34;&gt;3&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Extract only the third data.frame&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;imputed_data_3&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;map_int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;\&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;sum&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;is.na&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)))&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Verify missing values in each column&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pica.zhimg.com/v2-3bbc3caedc6742972d9cf6253ab105d6_1440w.jpg&#34;&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic1.zhimg.com/v2-dc404ea28cad69257a0b733383711244_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;You can also extract all complete imputed datasets at once in the following five ways:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;nf&#34;&gt;walk2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;ALL&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;STACKED&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;LONG&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;BROAD&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;REPEATED&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;c&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;all&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;stacked&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;long&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;broad&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s&#34;&gt;&#34;repeated&#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;\&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;assign&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;name&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;complete&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mids&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;action&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;arg&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;),&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;envir&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;.GlobalEnv&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Will generate these 5 objects with different imputation result formats in the global environment&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;action = parameter&lt;/th&gt;
+&lt;th&gt;Object Type&lt;/th&gt;
+&lt;th&gt;Features&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&#34;all&#34;&lt;/td&gt;
+&lt;td&gt;List&lt;/td&gt;
+&lt;td&gt;Each element is a complete imputed dataset&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&#34;stacked&#34;&lt;/td&gt;
+&lt;td&gt;Long format data frame&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&#34;long&#34;&lt;/td&gt;
+&lt;td&gt;Long format data frame&lt;/td&gt;
+&lt;td&gt;Additional .imp (imputation set) and .id (row index) markers&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&#34;broad&#34;&lt;/td&gt;
+&lt;td&gt;Wide format data frame&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&#34;repeated&#34;&lt;/td&gt;
+&lt;td&gt;Wide format data frame&lt;/td&gt;
+&lt;td&gt;Repeated wide format&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;4. with() Batch Modeling&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;n&#34;&gt;mira&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mids&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;with&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;lm&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Ozone&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;~&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Solar.R&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Wind&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Temp&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Month&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;Day&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;))&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Batch fit the same linear regression model&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;mira_analysis&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mira&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;summary&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Can get summary results of 5 models&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pica.zhimg.com/v2-b34a628e5603e647475011aae1874680_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;h2&gt;5. pool() Merge Analysis Results&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class=&#34;n&#34;&gt;mipo&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mira&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;
+&lt;span class=&#34;w&#34;&gt;  &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;pool&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Based on statistical theory, one-click merge analysis to get final results&lt;/span&gt;
+
+&lt;span class=&#34;n&#34;&gt;mipo_analysis&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;&amp;lt;-&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;n&#34;&gt;mipo&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;o&#34;&gt;|&amp;gt;&lt;/span&gt;&lt;span class=&#34;w&#34;&gt; &lt;/span&gt;&lt;span class=&#34;nf&#34;&gt;summary&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;()&lt;/span&gt;
+&lt;span class=&#34;c1&#34;&gt;# Get final summary results of the merged model&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic3.zhimg.com/v2-30b7a61ab4fbabb96e079bd0ad82e9ca_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;From the table, we can get the &lt;strong&gt;final linear regression equation&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;$$Ozone = -66.096 + 0.048 Solar.R - 3.012 Wind + 1.859 Temp - 2.875 Month + 0.304 Day$$&lt;/p&gt;
+&lt;p&gt;Types of &lt;strong&gt;R objects&lt;/strong&gt; in this article&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;R objects&#39; types&#34; src=&#34;https://pic3.zhimg.com/v2-8d0cf23c32bf2ddd654640f9723ff392_1440w.jpg&#34;&gt;&lt;img alt=&#34;MICE Method Schematic&#34; src=&#34;https://pic2.zhimg.com/v2-6c24556374d7eae28580a9663eec1de9_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;Appendix:&lt;/p&gt;
+&lt;p&gt;Built-in univariate imputation methods in the &lt;code&gt;mice&lt;/code&gt; package&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Imputation Method Name&lt;/th&gt;
+&lt;th&gt;Applicable Data Type&lt;/th&gt;
+&lt;th&gt;Method Full Name / Description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;pmm&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Predictive mean matching&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;midastouch&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Weighted predictive mean matching&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;sample&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Random sample from observed values&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;cart&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Classification and regression trees&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rf&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Random forest imputations&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mean&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Unconditional mean imputation&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;norm&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Bayesian linear regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;norm.nob&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Linear regression ignoring model error&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;norm.boot&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Linear regression using bootstrap&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;norm.predict&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Linear regression, predicted values&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lasso.norm&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Lasso linear regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lasso.select.norm&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Lasso select + linear regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;quadratic&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Imputation of quadratic terms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;ri&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Random indicator for nonignorable data&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;logreg&lt;/td&gt;
+&lt;td&gt;binary&lt;/td&gt;
+&lt;td&gt;Logistic regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;logreg.boot&lt;/td&gt;
+&lt;td&gt;binary&lt;/td&gt;
+&lt;td&gt;Logistic regression with bootstrap&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lasso.logreg&lt;/td&gt;
+&lt;td&gt;binary&lt;/td&gt;
+&lt;td&gt;Lasso logistic regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lasso.select.logreg&lt;/td&gt;
+&lt;td&gt;binary&lt;/td&gt;
+&lt;td&gt;Lasso select + logistic regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;polr&lt;/td&gt;
+&lt;td&gt;ordered&lt;/td&gt;
+&lt;td&gt;Proportional odds model&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;polyreg&lt;/td&gt;
+&lt;td&gt;unordered&lt;/td&gt;
+&lt;td&gt;Polytomous logistic regression&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lda&lt;/td&gt;
+&lt;td&gt;unordered&lt;/td&gt;
+&lt;td&gt;Linear discriminant analysis&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2l.norm&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Level - 1 normal heteroscedastic&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2l.lmer&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Level - 1 normal homoscedastic, lmer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2l.pan&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Level - 1 normal homoscedastic, pan&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2l.bin&lt;/td&gt;
+&lt;td&gt;binary&lt;/td&gt;
+&lt;td&gt;Level - 1 logistic, glmer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2lonly.mean&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Level - 2 class mean&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2lonly.norm&lt;/td&gt;
+&lt;td&gt;numeric&lt;/td&gt;
+&lt;td&gt;Level - 2 class normal&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2lonly.pmm&lt;/td&gt;
+&lt;td&gt;any&lt;/td&gt;
+&lt;td&gt;Level - 2 class predictive mean matching&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;p&gt;References:&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://amices.org/mice/&#34;&gt;mice&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://zhuanlan.zhihu.com/p/36436260&#34;&gt;处理缺失值之多重插补（Multiple Imputation）&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://cloud.tencent.com/developer/article/1972392&#34;&gt;缺失值的高级处理：用mice进行多重填补&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://blog.csdn.net/LeaningR/article/details/120145073&#34;&gt;R语言缺失值判断与处理mice包-3_r mice-CSDN博客&lt;/a&gt;&lt;/p&gt;
+</article>
+<footer class="article-footer">
+<span>【R 语言】mice 包进行缺失值多重插补与批量建模</span>
+<span><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/mice-package-for-multiple-imputation-and-batch-modeling/index.md" target="_blank" rel="noreferrer">View source on GitHub</a></span>
+</footer>
+</div>
+</body>
+</html>

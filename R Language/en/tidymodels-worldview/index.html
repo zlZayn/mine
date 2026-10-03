@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【R Language】The tidymodels Worldview: A Rigorous Language Hidden in R</title><style>
+/* =============================================================================
+   文章阅读页样式（由 pipeline 渲染英文 Markdown 时使用）
+   目标：让 GitHub Pages 上的英文文章可读，不追求华丽。
+   ============================================================================= */
+
+:root {
+    --fg: #1f2937;
+    --fg-muted: #6b7280;
+    --bg: #f9fafb;
+    --code-bg: #f3f4f6;
+    --border: #e5e7eb;
+    --accent: #0f172a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, &#34;Segoe UI&#34;, &#34;Helvetica Neue&#34;,
+                 &#34;PingFang SC&#34;, &#34;Hiragino Sans GB&#34;, &#34;Microsoft YaHei&#34;, sans-serif;
+    line-height: 1.75;
+    font-size: 16px;
+}
+
+.article-wrap {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+}
+
+/* ---- 返回专栏首页 ---- */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+    margin-bottom: 2rem;
+    padding: .375rem 1rem;
+    border-radius: 9999px;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--fg);
+    text-decoration: none;
+    transition: all .2s ease-in-out;
+}
+
+.back-link:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgb(0 0 0 / .15);
+}
+
+/* ---- 标题层级 ---- */
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.35;
+    margin: 2.5rem 0 1rem;
+    font-weight: 700;
+}
+
+h1 { font-size: 1.875rem; margin-top: 0; }
+h2 { font-size: 1.5rem; padding-bottom: .375rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.0625rem; }
+
+p { margin: 1rem 0; }
+
+a { color: #1d4ed8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- 图片：限制宽度并居中 ---- */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: .375rem;
+}
+
+/* ---- 代码 ---- */
+code {
+    background: var(--code-bg);
+    padding: .125rem .375rem;
+    border-radius: .25rem;
+    font-size: .875em;
+    font-family: &#34;SFMono-Regular&#34;, Consolas, &#34;Liberation Mono&#34;, Menlo, monospace;
+}
+
+pre {
+    background: var(--code-bg);
+    padding: 1rem 1.25rem;
+    border-radius: .5rem;
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+}
+
+pre code {
+    background: none;
+    padding: 0;
+    font-size: .875rem;
+    line-height: 1.6;
+}
+
+/* ---- 表格 ---- */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.5rem 0;
+    font-size: .9375rem;
+    display: block;
+    overflow-x: auto;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: .5rem .75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+th { background: var(--code-bg); font-weight: 600; }
+
+/* ---- 引用块 ---- */
+blockquote {
+    margin: 1.25rem 0;
+    padding: .125rem 1.25rem;
+    border-left: 4px solid var(--border);
+    color: var(--fg-muted);
+}
+
+blockquote p { margin: .75rem 0; }
+
+/* ---- 列表 ---- */
+ul, ol { padding-left: 1.75rem; margin: 1rem 0; }
+li { margin: .375rem 0; }
+
+/* ---- 分隔线 ---- */
+hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+}
+
+/* ---- 页脚 ---- */
+.article-footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: .875rem;
+    color: var(--fg-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+/* ---- 数学公式（MathJax 渲染失败时不要闪成裸 $） ---- */
+mjx-container { overflow-x: auto; overflow-y: hidden; }
+
+pre { line-height: 125%; }
+td.linenos .normal { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight { background: #f0f0f0; }
+.highlight .c { color: #60A0B0; font-style: italic } /* Comment */
+.highlight .err { border: 1px solid #F00 } /* Error */
+.highlight .k { color: #007020; font-weight: bold } /* Keyword */
+.highlight .o { color: #666 } /* Operator */
+.highlight .ch { color: #60A0B0; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #60A0B0; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #007020 } /* Comment.Preproc */
+.highlight .cpf { color: #60A0B0; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #60A0B0; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #60A0B0; background-color: #FFF0F0 } /* Comment.Special */
+.highlight .gd { color: #A00000 } /* Generic.Deleted */
+.highlight .ge { font-style: italic } /* Generic.Emph */
+.highlight .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.highlight .gr { color: #F00 } /* Generic.Error */
+.highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #00A000 } /* Generic.Inserted */
+.highlight .go { color: #888 } /* Generic.Output */
+.highlight .gp { color: #C65D09; font-weight: bold } /* Generic.Prompt */
+.highlight .gs { font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #04D } /* Generic.Traceback */
+.highlight .kc { color: #007020; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #007020 } /* Keyword.Pseudo */
+.highlight .kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #902000 } /* Keyword.Type */
+.highlight .m { color: #40A070 } /* Literal.Number */
+.highlight .s { color: #4070A0 } /* Literal.String */
+.highlight .na { color: #4070A0 } /* Name.Attribute */
+.highlight .nb { color: #007020 } /* Name.Builtin */
+.highlight .nc { color: #0E84B5; font-weight: bold } /* Name.Class */
+.highlight .no { color: #60ADD5 } /* Name.Constant */
+.highlight .nd { color: #555; font-weight: bold } /* Name.Decorator */
+.highlight .ni { color: #D55537; font-weight: bold } /* Name.Entity */
+.highlight .ne { color: #007020 } /* Name.Exception */
+.highlight .nf { color: #06287E } /* Name.Function */
+.highlight .nl { color: #002070; font-weight: bold } /* Name.Label */
+.highlight .nn { color: #0E84B5; font-weight: bold } /* Name.Namespace */
+.highlight .nt { color: #062873; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #BB60D5 } /* Name.Variable */
+.highlight .ow { color: #007020; font-weight: bold } /* Operator.Word */
+.highlight .w { color: #BBB } /* Text.Whitespace */
+.highlight .mb { color: #40A070 } /* Literal.Number.Bin */
+.highlight .mf { color: #40A070 } /* Literal.Number.Float */
+.highlight .mh { color: #40A070 } /* Literal.Number.Hex */
+.highlight .mi { color: #40A070 } /* Literal.Number.Integer */
+.highlight .mo { color: #40A070 } /* Literal.Number.Oct */
+.highlight .sa { color: #4070A0 } /* Literal.String.Affix */
+.highlight .sb { color: #4070A0 } /* Literal.String.Backtick */
+.highlight .sc { color: #4070A0 } /* Literal.String.Char */
+.highlight .dl { color: #4070A0 } /* Literal.String.Delimiter */
+.highlight .sd { color: #4070A0; font-style: italic } /* Literal.String.Doc */
+.highlight .s2 { color: #4070A0 } /* Literal.String.Double */
+.highlight .se { color: #4070A0; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #4070A0 } /* Literal.String.Heredoc */
+.highlight .si { color: #70A0D0; font-style: italic } /* Literal.String.Interpol */
+.highlight .sx { color: #C65D09 } /* Literal.String.Other */
+.highlight .sr { color: #235388 } /* Literal.String.Regex */
+.highlight .s1 { color: #4070A0 } /* Literal.String.Single */
+.highlight .ss { color: #517918 } /* Literal.String.Symbol */
+.highlight .bp { color: #007020 } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #06287E } /* Name.Function.Magic */
+.highlight .vc { color: #BB60D5 } /* Name.Variable.Class */
+.highlight .vg { color: #BB60D5 } /* Name.Variable.Global */
+.highlight .vi { color: #BB60D5 } /* Name.Variable.Instance */
+.highlight .vm { color: #BB60D5 } /* Name.Variable.Magic */
+.highlight .il { color: #40A070 } /* Literal.Number.Integer.Long */
+</style>
+</head>
+<body>
+<div class="article-wrap">
+<a class="back-link" href="../../../index.html">&#8592; R</a>
+<article>
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic2.zhimg.com/v2-26144a7b60f634c7e36759cd357adee7_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;The tidymodels core workflow: resampling → preprocessing → modeling → postprocessing → measurement, with orchestration running through all of it.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pica.zhimg.com/v2-bdd050b9d03e9aa935134b9584c9d120_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;The tidymodels surrounding ecosystem and hands-on examples: tuning, deployment, data, deep learning, and the list of core packages.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;01 | What it believes: modeling is not &#34;running a model&#34;, it is a pipeline&lt;/h3&gt;
+&lt;p&gt;In the traditional view, modeling is &#34;&lt;code&gt;lm(y ~ x, data)&lt;/code&gt;, done.&#34;&lt;/p&gt;
+&lt;p&gt;tidymodels does not see it that way. It holds that modeling is a complete pipeline running from raw data to the final decision:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Resampling → Preprocessing → Modeling → Postprocessing → Measurement&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Every one of these five stages affects the final result. You cannot care only about stage three and ignore the other four. In the traditional approach, preprocessing is written at the top of the script, evaluation is thrown together on the fly, and postprocessing does not exist at all — tidymodels says: no. These five stages must be treated as equals, and they must be managed explicitly.&lt;/p&gt;
+&lt;p&gt;That is why it turns each stage into its own package instead of stuffing everything into one big function.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic4.zhimg.com/v2-24d00959b34d40506f5471b6df0dbf0f_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;The tidymodels five-stage pipeline: resampling → preprocessing → modeling → postprocessing → measurement, with orchestration running through all of it.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;02 | What it believes: data leakage is original sin&lt;/h3&gt;
+&lt;p&gt;This is the most central conviction in the tidymodels worldview.&lt;/p&gt;
+&lt;p&gt;What is data leakage? Put simply: while training a model, you accidentally &#34;peek&#34; at information from the test data.&lt;/p&gt;
+&lt;p&gt;A classic example: you standardize the entire dataset first, and only then split it into a training set and a test set. At that point the standardization parameters in the training set already have information from the test set mixed into them. Your model evaluation will look too optimistic, because you cheated.&lt;/p&gt;
+&lt;p&gt;tidymodels calls data leakage &#34;a pervasive failure mode&#34;. Its design goal is: &lt;strong&gt;make sure you have no opportunity to make the mistake.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;How does it do that? By bundling everything into a single &lt;code&gt;workflow()&lt;/code&gt; object. When you call &lt;code&gt;fit()&lt;/code&gt;, it automatically learns the preprocessing parameters from the training data alone; when you call &lt;code&gt;predict()&lt;/code&gt;, it automatically applies the parameters learned during training to the new data.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;You do not need to manage these steps by hand, because managing them by hand is exactly where things go wrong.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The one and only reason &lt;code&gt;workflow&lt;/code&gt; exists is not to make your code look nice — it is to stop you from cheating.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic2.zhimg.com/v2-d250db7acbfcc6a9dbf0253e8e8378d3_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Splitting the dataset&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;03 | What it believes: models are interchangeable parts&lt;/h3&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://picx.zhimg.com/v2-4c94a2a94a0894177123bd8bb7f1ad59_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;In traditional R modeling, switching algorithms means switching to a completely different syntax. Every function has its own parameter names, its own data format, its own return structure. Change the algorithm and you have to learn everything again.&lt;/p&gt;
+&lt;p&gt;tidymodels says: that should not be the case.&lt;/p&gt;
+&lt;p&gt;It uses &lt;code&gt;parsnip&lt;/code&gt; to unify all models under a single syntax. Unified parameter names, unified data interface, unified return structure. Models become interchangeable parts. You can swap models the way you swap a tire, without having to learn how to drive all over again.&lt;/p&gt;
+&lt;p&gt;The conviction behind this is: &lt;strong&gt;the heart of modeling is &#34;what you want to do&#34;, not &#34;what tool you use to do it&#34;.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;04 | What it believes: preprocessing is not &#34;cleaning data&#34;, it is &#34;part of the model&#34;&lt;/h3&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pic4.zhimg.com/v2-977f0ef0796236de3df71c5e9b6c4485_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;In the traditional view, preprocessing means &#34;getting the data clean&#34; — preparatory work done before modeling, a separate matter from the model itself.&lt;/p&gt;
+&lt;p&gt;tidymodels says: wrong. Preprocessing is part of the model.&lt;/p&gt;
+&lt;p&gt;Why? Because the preprocessing parameters — means, standard deviations, encoding mappings, missing-value imputation rules — are learned from the data. Like a model&#39;s coefficients, they are &#34;trained&#34;. Manage them separately from the model and you will run into trouble.&lt;/p&gt;
+&lt;p&gt;So &lt;code&gt;recipes&lt;/code&gt; is not a &#34;data cleaning tool&#34; but a &#34;preprocessing specification&#34;. What it defines is &#34;how things should be handled&#34;, not &#34;the result after handling&#34;. The actual handling happens at the moment of &lt;code&gt;fit()&lt;/code&gt;, performed automatically by &lt;code&gt;workflow&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Preprocessing and the model are an inseparable whole. Pull them apart and you have a breeding ground for data leakage.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;05 | What it believes: evaluation must be honest&lt;/h3&gt;
+&lt;p&gt;In the traditional approach, evaluation is often &#34;compute the accuracy on the training set&#34; or &#34;just do some 70⁄30 split and run it&#34;.&lt;/p&gt;
+&lt;p&gt;tidymodels says: not good enough.&lt;/p&gt;
+&lt;p&gt;It puts &lt;code&gt;rsample&lt;/code&gt; at the very first step of the whole process, not the last. This means: &lt;strong&gt;before you do anything else, think clearly about how you will evaluate.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Cross-validation, bootstrap, validation sets, spatial resampling… &lt;code&gt;rsample&lt;/code&gt; provides a complete toolkit that lets you design your evaluation scheme before you start modeling. What is more, &lt;code&gt;workflow&lt;/code&gt; guarantees that on every resample the preprocessing parameters are learned only from that fold&#39;s training data — every fold&#39;s evaluation is honest.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;A model&#39;s worth lies not in how good it is on the training set, but in how good it is on unseen data. Designing the evaluation scheme matters more than the model itself.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;06 | What it believes: everything can be tuned, everything can be compared, and models ultimately have to go to production&lt;/h3&gt;
+&lt;p&gt;Tuning is not &#34;try a few settings by hand and see which looks best&#34;. &lt;code&gt;tune&lt;/code&gt; and &lt;code&gt;dials&lt;/code&gt; turn hyperparameter optimization into a systematic search process. You can define the search space, choose a search strategy, run in parallel, and automatically select the best. And because every model uses a unified interface, you can compare multiple models at once, or even stack several of them.&lt;/p&gt;
+&lt;p&gt;And a finished model run is not the end either. &lt;code&gt;vetiver&lt;/code&gt; handles versioning, deployment, and monitoring. &lt;code&gt;butcher&lt;/code&gt; handles slimming down. &lt;code&gt;tidypredict&lt;/code&gt; and &lt;code&gt;orbital&lt;/code&gt; translate models into SQL or portable equations. &lt;code&gt;applicable&lt;/code&gt; detects whether new samples have drifted away from the training distribution.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;The endpoint of modeling is not &#34;obtaining a model&#34; but &#34;making the model create value in the real world&#34;.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;07 | Why are there so many packages? Because there are many scenarios, not because the thinking is muddled&lt;/h3&gt;
+&lt;p&gt;The very first line of the official cheatsheet makes it clear: it is not a function manual, it is an ecosystem map.&lt;/p&gt;
+&lt;p&gt;The core meta-package &lt;code&gt;library(tidymodels)&lt;/code&gt; loads only a dozen or so packages:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;rsample&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;recipes&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;parsnip&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;workflows&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;yardstick&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;tune&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;dials&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;broom&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;tailor&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;infer&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;modeldata&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;workflowsets&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Everything else is a plugin you load &#34;only when you need it&#34;:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Scenario&lt;/th&gt;
+&lt;th&gt;Plugin&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Text&lt;/td&gt;
+&lt;td&gt;textrecipes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Class imbalance&lt;/td&gt;
+&lt;td&gt;themis&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Spatial data&lt;/td&gt;
+&lt;td&gt;spatialsample&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Survival analysis&lt;/td&gt;
+&lt;td&gt;censored&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Deep learning&lt;/td&gt;
+&lt;td&gt;tabby / brulee&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Deployment&lt;/td&gt;
+&lt;td&gt;vetiver&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;There are many packages because machine learning runs into many problems. Not because the thinking is muddled.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The right way to read it: treat the cheatsheet as a dictionary, not as a textbook. Want to learn the flow? Look at the five-stage diagram. Want to look up a scenario? Consult the corresponding grouping. Writing code day to day? Use only the dozen or so core packages.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://picx.zhimg.com/v2-bcc18b5525ec93a89a7d7c7319e989ed_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;08 | An objective assessment: is it actually pleasant to use?&lt;/h3&gt;
+&lt;h3&gt;Strengths&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;Unified syntax, easy switching between algorithm engines&lt;/li&gt;
+&lt;li&gt;Fundamentally prevents data leakage through &lt;code&gt;workflow&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Modular and composable, deeply integrated with the Tidyverse&lt;/li&gt;
+&lt;li&gt;Rigorous evaluation and systematic tuning, suited to production-grade pipelines&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Weaknesses&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;Steep learning curve, with abstract and scattered concepts&lt;/li&gt;
+&lt;li&gt;A huge number of packages and functions, easy to scare off newcomers&lt;/li&gt;
+&lt;li&gt;Abstraction and deferred execution add to the cost of understanding&lt;/li&gt;
+&lt;li&gt;Built on tibble underneath, so tuning on large data can be slow&lt;/li&gt;
+&lt;li&gt;Some critics point out that its bootstrap methods are statistically inconsistent for inference, making it better suited to predictive modeling than to strict statistical inference&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;Side-by-side comparison&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Framework&lt;/th&gt;
+&lt;th&gt;Design philosophy&lt;/th&gt;
+&lt;th&gt;Learning curve&lt;/th&gt;
+&lt;th&gt;Where it fits&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;tidymodels&lt;/td&gt;
+&lt;td&gt;Modular, rigorous, composable&lt;/td&gt;
+&lt;td&gt;High&lt;/td&gt;
+&lt;td&gt;Production-grade, reproducible, leakage-proof pipelines&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;caret&lt;/td&gt;
+&lt;td&gt;All-in-one, simple and direct&lt;/td&gt;
+&lt;td&gt;Low&lt;/td&gt;
+&lt;td&gt;Rapid prototyping&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mlr3&lt;/td&gt;
+&lt;td&gt;Object-oriented, highly extensible&lt;/td&gt;
+&lt;td&gt;Very high&lt;/td&gt;
+&lt;td&gt;Benchmarking, complex experiments&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;scikit-learn&lt;/td&gt;
+&lt;td&gt;Python ecosystem, unified API&lt;/td&gt;
+&lt;td&gt;Medium&lt;/td&gt;
+&lt;td&gt;Python users, deep learning integration&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Conclusion:&lt;/strong&gt; If you are new to R, or you just want to run a model quickly, it may leave you frustrated. If you are an experienced data scientist with extremely high demands for reproducibility, leakage prevention, and automated tuning, it will be a tremendous advantage.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;09 | Is it like any programming language?&lt;/h3&gt;
+&lt;p&gt;tidymodels really is like certain programming languages.&lt;/p&gt;
+&lt;h3&gt;Most like Rust: compile-time error prevention and an ownership mindset&lt;/h3&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pica.zhimg.com/v2-710acbcb35baba22d2a3f4ec131d4de2_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Rust&#39;s Borrow Checker enforces memory borrowing rules at the compilation stage; if the code has a memory safety hazard, it fails to compile and simply will not let you run it. tidymodels&#39; &lt;code&gt;workflow&lt;/code&gt; forcibly binds preprocessing and model together at the modeling stage: if you try to use information from the test set to guide training, the process errors out immediately or blocks you automatically.&lt;/p&gt;
+&lt;p&gt;Rust uses Traits to define a unified interface; implement that Trait and you can plug in seamlessly. &lt;code&gt;parsnip&lt;/code&gt; is exactly the same — it defines &#34;what a model must look like&#34;, and as long as a package implements that interface, whether it is &lt;code&gt;ranger&lt;/code&gt; or &lt;code&gt;xgboost&lt;/code&gt;, it can be swapped in seamlessly.&lt;/p&gt;
+&lt;p&gt;Rust uses Cargo to manage extremely fragmented yet highly composable crates. &lt;code&gt;tidymodels&lt;/code&gt; likewise uses a meta-package mechanism to chain dozens of independent small packages into one ecosystem.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Both chose to trade &#34;strict constraints early on&#34; for &#34;absolute safety later on&#34;.&lt;/strong&gt;&lt;/p&gt;
+&lt;h3&gt;Its soul is like Haskell: pure functional style and lazy evaluation&lt;/h3&gt;
+&lt;p&gt;&lt;img alt=&#34;&#34; src=&#34;https://pica.zhimg.com/v2-dcd541b64aa7f32b9fab44302402d346_1440w.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Data in Haskell is immutable; you cannot modify a variable, only generate new data from old data. tidymodels follows this strictly. You use &lt;code&gt;recipe()&lt;/code&gt; to define a recipe and &lt;code&gt;step_*()&lt;/code&gt; to add steps, and every step returns a new recipe object, never modifying the original data.&lt;/p&gt;
+&lt;p&gt;Haskell chains functions with &lt;code&gt;&amp;gt;&amp;gt;=&lt;/code&gt; or &lt;code&gt;$&lt;/code&gt;. tidymodels chains workflows with &lt;code&gt;%&amp;gt;%&lt;/code&gt; or &lt;code&gt;|&amp;gt;&lt;/code&gt;. Philosophically they are entirely in agreement: write a complex computation as a series of clear, readable data transformation pipelines.&lt;/p&gt;
+&lt;p&gt;Haskell&#39;s famous trait is &#34;compute nothing until the last possible moment&#34;. &lt;code&gt;recipes&lt;/code&gt;&#39; &lt;code&gt;prep()&lt;/code&gt; and &lt;code&gt;bake()&lt;/code&gt; embody this perfectly. When you write down a pile of &lt;code&gt;step_normalize()&lt;/code&gt;, R does not immediately go and compute means and variances; only at the moment you call &lt;code&gt;fit()&lt;/code&gt; does it truly begin to calculate. This design exists precisely to prevent &#34;computing ahead of time and thereby leaking data&#34;.&lt;/p&gt;
+&lt;h3&gt;Its architecture is like Java/C#: object orientation and dependency injection&lt;/h3&gt;
+&lt;p&gt;In Java you write &lt;code&gt;List list = new ArrayList()&lt;/code&gt;; in &lt;code&gt;parsnip&lt;/code&gt; you write &lt;code&gt;linear_reg() %&amp;gt;% set_engine(&#34;lm&#34;)&lt;/code&gt;. The front-end code depends only on the abstract interface, while the concrete implementation can be replaced at any time.&lt;/p&gt;
+&lt;p&gt;Java&#39;s Spring framework assembles its components into Beans. &lt;code&gt;workflow()&lt;/code&gt; is a container that injects a &lt;code&gt;recipe&lt;/code&gt; and a &lt;code&gt;model&lt;/code&gt; into itself, forming a complete executable unit.&lt;/p&gt;
+&lt;h3&gt;The ultimate conclusion&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;tidymodels is essentially &#34;a domain-specific language embedded in R, built specifically for machine learning&#34;. It borrows R&#39;s syntactic shell, but its worldview is Rust-grade rigor plus Haskell-grade pure-functional elegance.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3&gt;10 | Conclusion: not complicated, but rigorous&lt;/h3&gt;
+&lt;p&gt;What makes tidymodels intimidating stems, in essence, from the fact that in pursuit of engineering rigor it sacrificed how intuitive it is to get started.&lt;/p&gt;
+&lt;p&gt;It is not a hammer; it is an entire factory. You cannot &#34;just use it casually&#34; — you have to understand its worldview before you can truly use it.&lt;/p&gt;
+&lt;p&gt;But once you understand it, you will find:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;It is not complicated, it is rigorous. It is not cumbersome, it is complete. It forces you to become a better modeler — not because you use it, but because it will not let you cut corners.&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;If you remember only one sentence:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;One workflow, five stages, one iron law against leakage. Many packages because there are many scenarios, not because the thinking is muddled. Its soul is the rigor of Rust plus the elegance of Haskell.&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+</article>
+<footer class="article-footer">
+<span>【R 语言】tidymodels 的世界观：一门藏在 R 里的严谨语言</span>
+<span><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/tidymodels-worldview/index.md" target="_blank" rel="noreferrer">View source on GitHub</a></span>
+</footer>
+</div>
+</body>
+</html>

@@ -1,196 +1,199 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .article-card-link { display: block; }
-        .article-card { 
-            background-color: white; 
-            border-radius: 0.5rem; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
-            overflow: hidden; 
-            height: 10rem; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .article-card-gradient { 
-            height: 0.5rem; 
-        }
-        .article-card-content { 
-            padding: 1rem; 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .article-card-title { 
-            font-size: 1.125rem; 
-            font-weight: 700; 
-            color: #1f2937; 
-            line-height: 1.5; 
-            margin-bottom: 0.5rem; 
-        }
-        .article-card-links { 
-            display: flex; 
-            gap: 0.75rem; 
-            margin-top: auto; 
-        }
-        .link-button { 
-            padding: 0.375rem 1rem; 
-            border-radius: 9999px; 
-            text-decoration: none; 
-            font-size: 0.875rem; 
-            font-weight: 500; 
-            transition: all 200ms ease-in-out; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            min-width: 64px; 
-        }
-        .zhihu-link { 
-            background-color: transparent; 
-            color: #1f2937; 
-            border: none; 
-        }
-        .zhihu-link:hover { 
-            background-color: #0f172a; 
-            color: white; 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15); 
-        }
-        .github-link { 
-            background-color: transparent; 
-            color: #1f2937; 
-            border: none; 
-        }
-        .github-link:hover { 
-            background-color: #0f172a; 
-            color: white; 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15); 
-        }
-        .github-corner:hover .octo-arm {
-            animation: octocat-wave 560ms ease-in-out
-        }
-        @keyframes octocat-wave {
-            0%, 100% { transform: rotate(0) }
-            20%, 60% { transform: rotate(-25deg) }
-            40%, 80% { transform: rotate(10deg) }
-        }
-        @media (max-width: 500px) {
-            .github-corner:hover .octo-arm {
-                animation: none
-            }
-            .github-corner .octo-arm {
-                animation: octocat-wave 560ms ease-in-out
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* =============================================================================
+   R Language 专栏 —— 卡片样式
+   来源：从旧 index.html 的 &lt;style&gt; 块提取，视觉保持不变。
+   色值不在这里，渐变由 Tailwind 工具类提供（见 site.toml 的 [palette]）。
+   ============================================================================= */
+
+/* ---- 卡片容器 ---- */
+.article-card-link { display: block; }
+
+.article-card {
+    background-color: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -1px rgb(0 0 0 / .06);
+    overflow: hidden;
+    height: 10rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+
+.article-card:hover {
+    transform: translateY(-.5rem);
+    box-shadow: 0 10px 18px -3px rgb(0 0 0 / .1), 0 4px 8px -2px rgb(0 0 0 / .06);
+}
+
+/* ---- 顶部渐变条 ---- */
+.article-card-gradient { height: .5rem; transition: height .3s ease; }
+.article-card:hover .article-card-gradient { height: .75rem; }
+
+/* ---- 卡片内容 ---- */
+.article-card-content {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.article-card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.5;
+    margin-bottom: .5rem;
+}
+
+.article-card-title .title-en { display: block; }
+.article-card-title .title-zh { display: block; }
+
+/* 英文尚未翻译时的占位标题 */
+.article-card-title .title-pending {
+    color: #9ca3af;
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* ---- 卡片底部的两个按钮 ---- */
+.article-card-links {
+    display: flex;
+    gap: .75rem;
+    margin-top: auto;
+}
+
+.link-button {
+    padding: .375rem 1rem;
+    border-radius: 9999px;
+    text-decoration: none;
+    font-size: .875rem;
+    font-weight: 500;
+    transition: all .2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+}
+
+.zhihu-link,
+.github-link {
+    background-color: transparent;
+    color: #1f2937;
+    border: none;
+}
+
+.zhihu-link:hover,
+.github-link:hover {
+    background-color: #0f172a;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgb(0 0 0 / .15);
+}
+
+/* ---- 若某篇文章缺中文/英文链接，按钮显示为不可点状态 ---- */
+.link-button.is-missing {
+    opacity: .35;
+    text-decoration: line-through;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ---- 右上角 GitHub 角标 ---- */
+.github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+
+@keyframes octocat-wave {
+    0%, 100% { transform: rotate(0); }
+    20%, 60% { transform: rotate(-25deg); }
+    40%, 80% { transform: rotate(10deg); }
+}
+
+@media (max-width: 500px) {
+    .github-corner:hover .octo-arm { animation: none; }
+    .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+}
+
+</style>
 </head>
 <body class="bg-gray-50 p-6 pt-16 min-h-screen">
-    <a href="https://github.com/zlZayn/mine" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a>
-     <div class="max-w-7xl mx-auto">
-         <div class="text-center mb-10">
-             <h1 class="text-4xl font-bold text-gray-800 mb-2 text-center"><a href="https://www.r-project.org" target="_blank" rel="noreferrer" class="inline-block"> <img src="https://www.r-project.org/Rlogo.png" alt="R Language" width="40" height="40" style="display: block; margin: 0 auto;"/> </a></h1>
-             <div class="flex justify-center items-center space-x-4">
-                <a href="https://github.com/zlZayn/mine/tree/main/R%20Language" target="_blank" class="link-button github-link"><strong>Github Column</strong></a>
-                <a href="https://www.zhihu.com/column/c_1944877565140510713" target="_blank" class="link-button zhihu-link"><strong>知乎专栏</strong></a>
-            </div>
-         </div>
-         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6">
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-red-300 to-red-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】Anonymous Functions<br/>【R 语言】匿名函数</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91Anonymous%20Functions.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1944083434071917665" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-orange-300 to-orange-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】A Workflow Based on Nested Data Frames<br/>【R 语言】一种基于嵌套数据框的工作流</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91A%20Workflow%20Based%20on%20Nested%20Data%20Frames.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1944921736941384138" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-amber-300 to-amber-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】All-Subsets Regression Based on broom Package<br/>【R 语言】基于 broom 包的模型全子集回归</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91All-Subsets%20Regression%20Based%20on%20broom%20Package.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1957450684447323826" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-emerald-300 to-emerald-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】Plotting Known Functions with ggplot2<br/>【R 语言】ggplot2 绘制已知函数图像</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91Plotting%20Known%20Functions%20with%20ggplot2.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1948532373101713365" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-teal-300 to-teal-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】mice Package for Multiple Imputation and Batch Modeling<br/>【R 语言】mice 包进行缺失值多重插补与批量建模</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91mice%20Package%20for%20Multiple%20Imputation%20and%20Batch%20Modeling.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1946672841723454894" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-blue-300 to-blue-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】Nonlinear Least Squares and Linear Models<br/>【R 语言】非线性最小二乘法与线性模型</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91Nonlinear%20Least%20Squares%20and%20Linear%20Models.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-violet-300 to-violet-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】Chi-square Distribution and Convolution Effect<br/>【R 语言】卡方分布与卷积效应</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91Chi-square%20Distribution%20and%20Convolution%20Effect.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1961396245617685701" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-purple-300 to-purple-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】Lorenz Curve and Gini Index<br/>【R 语言】洛伦兹曲线与基尼指数</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91Lorenz%20Curve%20and%20Gini%20Index.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1951089194756703939" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-    <div class="article-card">
-        <div class="article-card-gradient bg-gradient-to-r from-pink-300 to-pink-600"></div>
-        <div class="article-card-content">
-            <h3 class="article-card-title">【R Language】broom Package for Tidy Modeling<br/>【R 语言】broom 包进行整洁建模</h3>
-            <div class="article-card-links flex justify-end">
-                <a href="https://github.com/zlZayn/mine/blob/main/R%20Language/%E3%80%90R%20Language%E3%80%91broom%20Package%20for%20Tidy%20Modeling.md" target="_blank" class="link-button github-link">English-Github</a>
-                <a href="https://zhuanlan.zhihu.com/p/1949603330578953873" target="_blank" class="link-button zhihu-link">中文-知乎</a>
-            </div>
-        </div>
-    </div>
-        </div>
-    </div>
+<a href="https://github.com/zlZayn/mine" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a>
+<div class="max-w-7xl mx-auto">
+<div class="text-center mb-10">
+<h1 class="text-4xl font-bold text-gray-800 mb-2 text-center"><a href="https://www.r-project.org" target="_blank" rel="noreferrer" class="inline-block"><img src="https://www.r-project.org/Rlogo.png" alt="R Language" width="40" height="40" style="display: block; margin: 0 auto;"/></a></h1>
+<div class="flex justify-center items-center space-x-4"><a href="https://github.com/zlZayn/mine/tree/main/R%20Language" target="_blank" class="link-button github-link"><strong>Github Column</strong></a><a href="https://www.zhihu.com/column/c_1944877565140510713" target="_blank" class="link-button zhihu-link"><strong>知乎专栏</strong></a></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6"><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-emerald-300 to-emerald-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】The tidymodels Worldview: A Rigorous Language Hidden in R</span><span class="title-zh">【R 语言】tidymodels 的世界观：一门藏在 R 里的严谨语言</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/tidymodels-worldview/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/2088737447098303432" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-rose-300 to-rose-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Writing R Extensions in Rust: A Complete Practical Guide</span><span class="title-zh">【R 语言】用 Rust 给 R 写扩展：完整实践指南</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/rust-extensions-for-r/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/2087557727866320879" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-violet-300 to-violet-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Chi-square Distribution and Convolution Effect</span><span class="title-zh">【R 语言】卡方分布与卷积效应</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/chi-square-distribution-and-convolution-effect/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1961396245617685701" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-amber-300 to-amber-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】All-Subsets Regression Based on broom Package</span><span class="title-zh">【R 语言】基于 broom 包的模型全子集回归</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/all-subsets-regression-based-on-broom-package/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1957450684447323826" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-blue-300 to-blue-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Nonlinear Least Squares and Linear Models</span><span class="title-zh">【R 语言】非线性最小二乘法与线性模型</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/nonlinear-least-squares-and-linear-models/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1954307887825414074" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-purple-300 to-purple-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Lorenz Curve and Gini Index</span><span class="title-zh">【R 语言】洛伦兹曲线与基尼指数</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/lorenz-curve-and-gini-index/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1951089194756703939" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-pink-300 to-pink-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】broom Package for Tidy Modeling</span><span class="title-zh">【R 语言】broom 包进行整洁建模</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/broom-package-for-tidy-modeling/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1949603330578953873" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-emerald-300 to-emerald-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Plotting Known Functions with ggplot2</span><span class="title-zh">【R 语言】ggplot2 绘制已知函数图像</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/plotting-known-functions-with-ggplot2/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1948532373101713365" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-teal-300 to-teal-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】mice Package for Multiple Imputation and Batch Modeling</span><span class="title-zh">【R 语言】mice 包进行缺失值多重插补与批量建模</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/mice-package-for-multiple-imputation-and-batch-modeling/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1946672841723454894" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-orange-300 to-orange-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】A Workflow Based on Nested Data Frames</span><span class="title-zh">【R 语言】一种基于嵌套数据框的工作流</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/a-workflow-based-on-nested-data-frames/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1944921736941384138" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div><div class="article-card">
+<div class="article-card-gradient bg-gradient-to-r from-red-300 to-red-600"></div>
+<div class="article-card-content">
+<h3 class="article-card-title"><span class="title-en">【R Language】Anonymous Functions</span><span class="title-zh">【R 语言】匿名函数</span></h3>
+<div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/anonymous-functions/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1944083434071917665" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
+</div>
+</div></div>
+</div>
 </body>
 </html>
