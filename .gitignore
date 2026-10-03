@@ -24,3 +24,6 @@ _archive/legacy-pipeline/**/*.html
 # ---- 本地临时产物 ----
 _local/
 R Language/pipeline/.cache/
+
+# ---- uv 虚拟环境 ----
+.venv/

@@ -1,0 +1,152 @@
+# =============================================================================
+#  内容来源映射
+#
+#  这里记录「仓库里的文章」与「仓库外的原始笔记」之间的对应关系。
+#  它是一次性迁移（migrate）用的数据，不是代码 —— 所以从 migrate.py 里抽出来。
+#
+#  为什么不写库根路径：
+#    写个人机器的绝对路径会让流水线无法在别的机器或 CI 上运行。
+#    库根改为按下面的顺序解析（见 migrate.py 的 resolve_vault_root）：
+#      1. 命令行 --vault-root
+#      2. 环境变量 RLANG_VAULT_ROOT
+#      3. 从本文件所在目录逐级向上找含 .obsidian 的目录
+# =============================================================================
+
+[vault]
+# 留空 = 自动探测（推荐）。填了就优先用它，仅用于本机调试。
+# 例：root = "D:/ObsidianDirectory"
+root = ""
+
+# 自动探测时的候选起点（相对仓库根）。这些目录下若存在 .obsidian 即认定为库根。
+probe_from = [
+  "R Language/pipeline",
+  "R Language",
+  ".",
+]
+
+# 在库根下、用来定位库根的标志
+markers = [".obsidian", ".rlang-vault-root"]
+
+# -----------------------------------------------------------------------------
+# 权威中文标题覆盖表
+#
+#   Obsidian 源码里的 zhihu-title 与实际发布到知乎的标题存在漂移，例如
+#     mice  源码「…多重插补」          线上「…多重插补与批量建模」
+#     broom 源码「broom包进行整洁建模」 线上「broom 包进行整洁建模」
+#   若以源码为准，index.html 上的中文标题会与知乎页面对不上。
+#   凡有出入者，以旧 index.html 里已发布过的标题为准，显式登记在这里。
+#
+#   前缀（【R 语言】）由流水线强制补齐，此处写全也无妨。
+# -----------------------------------------------------------------------------
+[canonical_zh_titles]
+anonymous-functions = "【R 语言】匿名函数"
+a-workflow-based-on-nested-data-frames = "【R 语言】一种基于嵌套数据框的工作流"
+mice-package-for-multiple-imputation-and-batch-modeling = "【R 语言】mice 包进行缺失值多重插补与批量建模"
+broom-package-for-tidy-modeling = "【R 语言】broom 包进行整洁建模"
+chi-square-distribution-and-convolution-effect = "【R 语言】卡方分布与卷积效应"
+rust-extensions-for-r = "【R 语言】用 Rust 给 R 写扩展：完整实践指南"
+tidymodels-worldview = "【R 语言】tidymodels 的世界观：一门藏在 R 里的严谨语言"
+
+# -----------------------------------------------------------------------------
+# 每篇文章的来源
+#
+#   slug          仓库内的文章标识（也是 en/<slug>/ 与 zh/<slug>/ 的目录名）
+#   zh_source     中文笔记相对库根的路径；指向目录时自动取同名 .md，
+#                 也可直接写 .md 文件路径
+#   zh_md         目录内 md 的文件名（仅当它与目录名不同才需要写）
+#   en_old        旧的平铺英文文件名（相对 R Language/），迁移后该文件被删除
+#   zhihu_link    知乎原文链接，卡片上的「中文-知乎」按钮用它
+#   created_at    发布时间，格式 "2025-10-14 15:11"；留空则排序时排到最后
+#   topic         zhihu-topics 的值
+# -----------------------------------------------------------------------------
+
+[[article]]
+slug = "anonymous-functions"
+en_old = "【R Language】Anonymous Functions.md"
+zh_source = "R/【R 语言】匿名函数"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1944083434071917665"
+created_at = "2025-09-01 00:00"     # 源缺 frontmatter，取自旧 index.html
+topic = "R"
+
+[[article]]
+slug = "a-workflow-based-on-nested-data-frames"
+en_old = "【R Language】A Workflow Based on Nested Data Frames.md"
+zh_source = "R/【R 语言】一种基于嵌套数据框的工作流"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1944921736941384138"
+created_at = "2025-09-02 00:00"     # 源缺 frontmatter，取自旧 index.html
+topic = "R"
+
+[[article]]
+slug = "all-subsets-regression-based-on-broom-package"
+en_old = "【R Language】All-Subsets Regression Based on broom Package.md"
+zh_source = "R/【R 语言】基于 broom 包的模型全子集回归"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1957450684447323826"
+created_at = "2025-10-03 14:24"
+topic = "R"
+
+[[article]]
+slug = "plotting-known-functions-with-ggplot2"
+en_old = "【R Language】Plotting Known Functions with ggplot2.md"
+zh_source = "R/【R 语言】ggplot2 绘制已知函数图像"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1948532373101713365"
+created_at = "2025-09-08 23:58"
+topic = "R"
+
+[[article]]
+slug = "mice-package-for-multiple-imputation-and-batch-modeling"
+en_old = "【R Language】mice Package for Multiple Imputation and Batch Modeling.md"
+zh_source = "R/【R 语言】mice 包进行缺失值多重插补与批量建模"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1946672841723454894"
+created_at = "2025-09-04 00:19"
+topic = "R"
+
+[[article]]
+slug = "nonlinear-least-squares-and-linear-models"
+en_old = "【R Language】Nonlinear Least Squares and Linear Models.md"
+zh_source = "R/【R 语言】非线性最小二乘法与线性模型"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1954307887825414074"
+created_at = "2025-09-24 22:15"
+topic = "R"
+
+[[article]]
+slug = "chi-square-distribution-and-convolution-effect"
+en_old = "【R Language】Chi-square Distribution and Convolution Effect.md"
+zh_source = "R/新建文件夹"
+zh_md = "【R 语言】卡方分布与卷积效应.md"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1961396245617685701"
+created_at = "2025-10-14 15:11"
+topic = "R"
+note = "笔记目录名是「新建文件夹」，图片全在 plots/ 子目录"
+
+[[article]]
+slug = "lorenz-curve-and-gini-index"
+en_old = "【R Language】Lorenz Curve and Gini Index.md"
+zh_source = "R/【R 语言】洛伦兹曲线与基尼指数"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1951089194756703939"
+created_at = "2025-09-16 01:09"
+topic = "R"
+
+[[article]]
+slug = "broom-package-for-tidy-modeling"
+en_old = "【R Language】broom Package for Tidy Modeling.md"
+zh_source = "R/【R 语言】broom 包进行整洁建模"
+zhihu_link = "https://zhuanlan.zhihu.com/p/1949603330578953873"
+created_at = "2025-09-11 22:51"
+topic = "R"
+
+# 新增文章：中文源是知乎导出件（带 -落日阳红的文章 后缀），英文为译文
+[[article]]
+slug = "rust-extensions-for-r"
+en_old = ""
+zh_source = "zhihu/用 Rust 给 R 写扩展：完整实践指南-落日阳红的文章.md"
+zhihu_link = "https://zhuanlan.zhihu.com/p/2087557727866320879"
+created_at = ""                      # 待补：格式 "2025-10-14 15:11"
+topic = "R"
+
+[[article]]
+slug = "tidymodels-worldview"
+en_old = ""
+zh_source = "zhihu/tidymodels 的世界观：一门藏在 R 里的严谨语言-落日阳红的文章.md"
+zhihu_link = "https://zhuanlan.zhihu.com/p/2088737447098303432"
+created_at = ""                      # 待补
+topic = "R"

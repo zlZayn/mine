@@ -1,0 +1,34 @@
+{# ===========================================================================
+   英文文章阅读页
+   由 pipeline 渲染 ENGLISH Markdown 得到，输出到 R Language/en/<slug>/index.html
+   =========================================================================== #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+{%- if has_math %}
+<script>
+MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] } };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+{%- endif %}
+<style>
+{{ article_css }}
+{{ pygments_css }}
+</style>
+</head>
+<body>
+<div class="article-wrap">
+<a class="back-link" href="{{ root_prefix }}index.html">&#8592; {{ home_label }}</a>
+<article>
+{{ content }}
+</article>
+<footer class="article-footer">
+<span>{{ footer_left }}</span>
+<span><a href="{{ source_url }}" target="_blank" rel="noreferrer">{{ source_label }}</a></span>
+</footer>
+</div>
+</body>
+</html>

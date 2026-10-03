@@ -1,0 +1,111 @@
+/* =============================================================================
+   R Language 专栏 —— 卡片样式
+   来源：从旧 index.html 的 <style> 块提取，视觉保持不变。
+   色值不在这里，渐变由 Tailwind 工具类提供（见 site.toml 的 [palette]）。
+   ============================================================================= */
+
+/* ---- 卡片容器 ---- */
+.article-card-link { display: block; }
+
+.article-card {
+    background-color: #fff;
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -1px rgb(0 0 0 / .06);
+    overflow: hidden;
+    height: 10rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+
+.article-card:hover {
+    transform: translateY(-.5rem);
+    box-shadow: 0 10px 18px -3px rgb(0 0 0 / .1), 0 4px 8px -2px rgb(0 0 0 / .06);
+}
+
+/* ---- 顶部渐变条 ---- */
+.article-card-gradient { height: .5rem; transition: height .3s ease; }
+.article-card:hover .article-card-gradient { height: .75rem; }
+
+/* ---- 卡片内容 ---- */
+.article-card-content {
+    padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.article-card-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.5;
+    margin-bottom: .5rem;
+}
+
+.article-card-title .title-en { display: block; }
+.article-card-title .title-zh { display: block; }
+
+/* 英文尚未翻译时的占位标题 */
+.article-card-title .title-pending {
+    color: #9ca3af;
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* ---- 卡片底部的两个按钮 ---- */
+.article-card-links {
+    display: flex;
+    gap: .75rem;
+    margin-top: auto;
+}
+
+.link-button {
+    padding: .375rem 1rem;
+    border-radius: 9999px;
+    text-decoration: none;
+    font-size: .875rem;
+    font-weight: 500;
+    transition: all .2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+}
+
+.zhihu-link,
+.github-link {
+    background-color: transparent;
+    color: #1f2937;
+    border: none;
+}
+
+.zhihu-link:hover,
+.github-link:hover {
+    background-color: #0f172a;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgb(0 0 0 / .15);
+}
+
+/* ---- 若某篇文章缺中文/英文链接，按钮显示为不可点状态 ---- */
+.link-button.is-missing {
+    opacity: .35;
+    text-decoration: line-through;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ---- 右上角 GitHub 角标 ---- */
+.github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+
+@keyframes octocat-wave {
+    0%, 100% { transform: rotate(0); }
+    20%, 60% { transform: rotate(-25deg); }
+    40%, 80% { transform: rotate(10deg); }
+}
+
+@media (max-width: 500px) {
+    .github-corner:hover .octo-arm { animation: none; }
+    .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+}

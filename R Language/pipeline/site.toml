@@ -1,0 +1,115 @@
+# =============================================================================
+#  R Language 专栏 —— 站点配置
+#
+#  这里是整个站点唯一允许出现"字面量"的地方。
+#  模板、脚本、CSS 里都不许再写死站点名、仓库地址、颜色值。
+#  改站点信息 = 只改这个文件。
+# =============================================================================
+
+[site]
+# 浏览器标签页标题
+title = "R"
+# HTML lang 属性
+lang = "zh-CN"
+
+# -----------------------------------------------------------------------------
+# 页头
+# -----------------------------------------------------------------------------
+[header]
+# 页头正中的图标（R logo）与它的点击目标
+logo_image = "https://www.r-project.org/Rlogo.png"
+logo_alt = "R Language"
+logo_href = "https://www.r-project.org"
+
+# 页头下方两个胶囊按钮：[英文仓库] [中文专栏]
+[[header.links]]
+label = "Github Column"
+href = "https://github.com/zlZayn/mine/tree/main/R%20Language"
+style = "github"
+
+[[header.links]]
+label = "知乎专栏"
+href = "https://www.zhihu.com/column/c_1944877565140510713"
+style = "zhihu"
+
+# -----------------------------------------------------------------------------
+# 右上角 GitHub 角标
+# -----------------------------------------------------------------------------
+[corner]
+href = "https://github.com/zlZayn/mine"
+
+# -----------------------------------------------------------------------------
+# 卡片上两个按钮的文字
+# -----------------------------------------------------------------------------
+[card]
+# 指向本仓库的英文原文
+english_label = "English-Github"
+# 指向知乎的中文原文
+chinese_label = "中文-知乎"
+# 英文尚未翻译时，卡片上半行显示的占位文字
+pending_label = "English version pending"
+
+# -----------------------------------------------------------------------------
+# 仓库坐标
+#
+#  英文 md 在本仓库中的位置 → 用于推导英文原文链接
+#  base_url 留空则自动从 remote 推断为 https://github.com/<owner>/<repo>
+# -----------------------------------------------------------------------------
+[repo]
+base_url = "https://github.com/zlZayn/mine"
+branch = "main"
+# 英文文章所在目录（仓库内路径）
+content_dir = "R Language/en"
+
+# -----------------------------------------------------------------------------
+# 渐变色板
+#
+#  格式： "<tailwind 色名>-<起始色阶> .. <结束色阶>"
+#  渲染时会拼成完整的 Tailwind 类名（from-red-300 to-red-600），
+#  而不是用变量插值 —— 否则 Tailwind CDN 的 JIT 扫描不到这些类名。
+# -----------------------------------------------------------------------------
+[palette]
+stops = [
+  "red-300:red-600",
+  "orange-300:orange-600",
+  "amber-300:amber-600",
+  "yellow-300:yellow-600",
+  "emerald-300:emerald-600",
+  "teal-300:teal-600",
+  "blue-300:blue-600",
+  "indigo-300:indigo-600",
+  "violet-300:violet-600",
+  "purple-300:purple-600",
+  "pink-300:pink-600",
+  "rose-300:rose-600",
+]
+
+# 固定色号分配：article id -> 色板下标（0 起）
+#
+#  为什么不用"按发布时间排序"自动分配？
+#  因为那样每加一篇新文章（哪怕插在中间），后面所有卡片的颜色都会变。
+#  固定表 + 新文章用稳定哈希兜底 = 已发布卡片的颜色永不改变。
+#
+#  下表逐条对齐旧 index.html 里已发布的颜色，是回归基线，不要随意改动。
+#  下标含义见上面的 stops 数组（0=red … 11=rose）。
+[palette.assign]
+anonymous-functions = 0                                       # red
+a-workflow-based-on-nested-data-frames = 1                    # orange
+all-subsets-regression-based-on-broom-package = 2             # amber
+plotting-known-functions-with-ggplot2 = 4                     # emerald
+mice-package-for-multiple-imputation-and-batch-modeling = 5   # teal
+nonlinear-least-squares-and-linear-models = 6                 # blue
+chi-square-distribution-and-convolution-effect = 8            # violet
+lorenz-curve-and-gini-index = 9                               # purple
+broom-package-for-tidy-modeling = 10                          # pink
+
+# 新增文章：由 slug 稳定哈希自动取色（无需登记，登记了也不会变）
+
+# -----------------------------------------------------------------------------
+# 卡片排序
+#
+#  newest-first : 按发布时间倒序（默认，最新在最前）
+#  oldest-first : 按发布时间正序
+# -----------------------------------------------------------------------------
+[order]
+direction = "newest-first"

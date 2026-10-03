@@ -1,43 +1,122 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+# 构建并部署 R Language 专栏到 GitHub Pages
+#
+# 关键设计：产物是**白名单**，不是整个仓库。
+#   旧版用 path: '.'，等于把整个仓库（含 zh/ 中文、pipeline/ 源码、site.toml）
+#   全部打包成静态文件公开可下载，中文 Markdown 会因此变成可访问的网页。
+#   这里只上传 index.html 与 R Language/en/，中文与流水线源码不进产物。
+#
+#   注：仓库是 public，源码本身在 GitHub 上仍可见；
+#   本 workflow 保证的是「Pages 站点上不出现中文」。
+
+name: Deploy R Language column to Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+    paths:
+      - "index.html"
+      - "R Language/en/**"
+      - "R Language/zh/**"
+      - "R Language/pipeline/**"
+      - ".github/workflows/static.yml"
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pipeline dependencies
+        run: python -m pip install --upgrade pip jinja2 markdown pygments
+
+      - name: Verify index.html matches the content
+        env:
+          PYTHONPATH: ${{ github.workspace }}/R Language/pipeline/src
+        working-directory: "R Language/pipeline"
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "src")
+          from rlang_pipeline.paths import get_paths
+          from rlang_pipeline.config import load_site_config
+          from rlang_pipeline.build import build_index
+
+          paths = get_paths()
+          config = load_site_config(paths.site_config)
+          expected, count, _ = build_index(paths, config, dry_run=True)
+          actual = paths.site_output.read_text(encoding="utf-8")
+          if actual != expected:
+              print(f"index.html 已过期（当前内容 {count} 篇）。请本地运行：")
+              print("    uv run python -m rlang_pipeline build")
+              sys.exit(1)
+          print(f"index.html 与内容一致，共 {count} 篇文章")
+          PY
+
+      - name: Assemble Pages artifact
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p "_site/R Language"
+
+          cp index.html _site/index.html
+          touch _site/.nojekyll
+
+          # 保持与仓库同构的路径：_site/R Language/en/...
+          # 这样文章页里的相对链接（../index.html 指向 en/index.html）
+          # 在本地和线上完全一致，不需要在构建时区分环境。
+          cp -r "R Language/en" "_site/R Language/en"
+
+          # 断言：产物里不允许出现中文内容或流水线源码
+          if [ -d "_site/R Language/zh" ]; then
+            echo "::error::中文目录进入了 Pages 产物"
+            exit 1
+          fi
+          if find _site \( -name "*.py" -o -name "site.toml" -o -name "*.j2" \) | grep -q .; then
+            echo "::error::流水线源码进入了 Pages 产物"
+            find _site \( -name "*.py" -o -name "site.toml" -o -name "*.j2" \)
+            exit 1
+          fi
+          if grep -rl "zhihu-title" _site 2>/dev/null | grep -q .; then
+            echo "::error::产物中检出中文 frontmatter"
+            grep -rl "zhihu-title" _site
+            exit 1
+          fi
+
+          echo "产物概况："
+          find _site -maxdepth 3 | sort | head -40
+          echo "产物大小：$(du -sh _site | cut -f1)"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "_site"
+
   deploy:
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
