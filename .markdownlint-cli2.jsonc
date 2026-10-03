@@ -1,0 +1,40 @@
+{
+  "config": {
+    "MD013": false,
+    "MD033": false,
+    "MD036": false,
+    "MD041": false,
+    "MD045": false,
+
+    "MD012": { "maximum": 1 },
+    "MD024": { "siblings_only": true },
+    "MD007": { "indent": 2 },
+    "MD029": { "style": "one" },
+    "MD030": {
+      "ul_single": 1,
+      "ol_single": 1,
+      "ul_multi": 1,
+      "ol_multi": 1
+    },
+
+    "MD046": { "style": "fenced" },
+    "MD048": { "style": "backtick" }
+  },
+
+  "globs": [
+    "R Language/en/**/*.md",
+    "R Language/zh/**/*.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "README.md",
+    "_archive/**/*.md",
+    "R Language/pipeline/**/*.md"
+  ],
+
+  "ignores": [
+    "**/*.html",
+    "_site/**",
+    "**/.venv/**",
+    "**/node_modules/**"
+  ]
+}

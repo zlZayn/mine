@@ -140,7 +140,7 @@ slug = "rust-extensions-for-r"
 en_old = ""
 zh_source = "zhihu/用 Rust 给 R 写扩展：完整实践指南-落日阳红的文章.md"
 zhihu_link = "https://zhuanlan.zhihu.com/p/2087557727866320879"
-created_at = ""                      # 待补：格式 "2025-10-14 15:11"
+created_at = "2025-09-27 12:00"
 topic = "R"
 
 [[article]]
@@ -148,5 +148,5 @@ slug = "tidymodels-worldview"
 en_old = ""
 zh_source = "zhihu/tidymodels 的世界观：一门藏在 R 里的严谨语言-落日阳红的文章.md"
 zhihu_link = "https://zhuanlan.zhihu.com/p/2088737447098303432"
-created_at = ""                      # 待补
+created_at = "2025-09-30 12:00"
 topic = "R"
