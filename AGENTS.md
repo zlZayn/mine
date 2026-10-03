@@ -21,45 +21,66 @@
 在 `R Language/pipeline/` 下执行：
 
 ```bash
-uv sync                                    # 准备环境（首次）
-uv run python -m rlang_pipeline build      # 重新生成 index.html 与英文阅读页
-uv run python -m rlang_pipeline check      # 完整性体检
-uv run python -m rlang_pipeline import <md>  # 导入新文章中文源
+uv sync                                       # 准备环境（首次）
+uv run python -m rlang_pipeline build         # 重新生成 index.html 与英文阅读页
+uv run python -m rlang_pipeline check         # 完整性体检（语义层）
+uv run python -m rlang_pipeline import <md>   # 导入新文章中文源
+uv run pytest -q                              # 单元测试
 ```
 
-日常发布流程见 [pipeline/README.md](R%20Language/pipeline/README.md)。
+在仓库根执行：
+
+```bash
+npx markdownlint-cli2          # 检查文章格式
+npx markdownlint-cli2 --fix    # 自动修（空行、列表标记）
+```
+
+排版规则的分层见 [RULES.md](R%20Language/pipeline/RULES.md)。
 
 ---
 
 ## 验证快照
 
 - 部署：[Deploy R Language column to Pages](https://github.com/zlZayn/mine/actions/workflows/static.yml)（徽章见 [README.md](README.md)）
-- 全量体检：`check` 应为 **0 FAIL**（两条待办除外，见下）
-- 站点自检：11 张卡片 / 11 个英文阅读页 / 0 断链
+- 线上站点：<https://zlzayn.github.io/mine/> —— 11 张卡片，与本地生成物逐字节一致
+- `check` 0 FAIL；`pytest` 99 passed；`markdownlint` 14 项（均为严格规则提示，非阻断）
 
 ---
 
 ## 待办
 
-- [ ] 补 `rust-extensions-for-r` 与 `tidymodels-worldview` 的 `zhihu-created-at`
-      （写在 [vault-map.toml](R%20Language/pipeline/vault-map.toml) 的 `created_at`）
-- [ ] `D:\ObsidianDirectory\zhihu\` 的 `process_files.py` 已被本流水线取代，待清理
-- [ ] `mine_R Language at main…txt` 等采集残留只存在于仓库外备份，确认后可弃
+- [ ] 清理仓库外残留：`D:\PythonDirectory\_知乎_legacy_backup_20261003\`
+      （采集残留备份，新流水线已不需要）
+- [ ] `markdownlint` 剩余 14 项：多为 MD025（多一级标题）与 MD040（无语言围栏），
+      目录树那处**有意留空**，不必强行满足
 
 ---
 
 ## 活跃坑
 
+按踩过的时间顺序，每条都对应一次真实故障：
+
 - **图片文件名含空格与括号**（`Lorenz Curve.png`、`unnest().png`）
-  正则不能用 `[^)\s]+`，否则名字被截断、体检误报"图片不存在"
-- **知乎导出把 R 代码标成 ` ```ada `**，Rust 代码标成 ` ```text `
-  归一化时按内容嗅探修正（`normalize.fix_code_fences`）
-- **frontmatter 与实际发布标题会漂移**（`mice`、`broom` 两篇历史遗留）
+  正则必须允许一层配对括号**且不排除空格**：
+  `(?:<([^>]+)>|((?:[^()]|\([^()]*\))+))`。
+  试过三种错法：`[^)\s]+` 截断空格名；`(?:[^()\s]|\([^()]*\))+` 同样排除空格；
+  `[^)]+` 贪婪停在第一个 `)` 把 `unnest(` 截断。
+- **知乎导出把 R 代码标成 `ada`**，Rust 代码标成 `text`
+  归一化按内容嗅探修正；`|>` 可在行中，不能锚定行尾
+- **frontmatter 与实际发布标题会漂移**（`mice`、`broom`）
   以 [vault-map.toml](R%20Language/pipeline/vault-map.toml) 的 `canonical_zh_titles` 为准
 - **`enforce_title_prefix` 不能用"裸标题是否为空"判断有无前缀**
-  只有前缀没内容时裸标题也是空串，两种含义撞车会把标题丢掉
+  只有前缀没内容时裸标题也是空串，两种含义撞车会把标题丢掉。
+  函数因此返回三元组 `(裸标题, 标准前缀, 是否本来就有前缀)`。
 - **Tailwind CDN 的 JIT 按字面量扫类名**
   色板在 `site.toml` 里存成完整的 `from-red-300 to-red-600`，模板不许插值拼类名
+- **markdownlint 的默认规则会改坏东西**
+  MD029 默认 lazy 编号会把 `1. 2. 3.` 改成 `1. 1. 1.`（须设 `"style": "ordered"`）；
+  MD026 会去掉标题末尾句号。作用范围已收窄到 `R Language/{en,zh}`，
+  不含 `_archive/`（历史证据不得改动）与根文档（有作者语气）
+- **迁移的备份机制不能改名文章目录**
+  曾用 `<slug>.__stash__` 做备份，异常时不还原导致文章消失、
+  且残留目录被当成一篇文章混进产物。现改为目录内的 `.assets-backup/`。
 
 ---
 
@@ -68,6 +89,8 @@ uv run python -m rlang_pipeline import <md>  # 导入新文章中文源
 - 站点用途与入口 → [README.md](README.md)
 - 设计决策与不可破坏约束 → [ARCHITECTURE.md](ARCHITECTURE.md)
 - 流水线用法 → [R Language/pipeline/README.md](R%20Language/pipeline/README.md)
-- 站点内容与构建配置 → [R Language/pipeline/site.toml](R%20Language/pipeline/site.toml)
+- 规则分层：什么写死、什么配置 → [R Language/pipeline/RULES.md](R%20Language/pipeline/RULES.md)
+- 站点与构建配置 → [R Language/pipeline/site.toml](R%20Language/pipeline/site.toml)
 - 文章来源映射 → [R Language/pipeline/vault-map.toml](R%20Language/pipeline/vault-map.toml)
-- 第一代流程存档（已废弃） → [_archive/legacy-pipeline/README.md](_archive/legacy-pipeline/README.md)
+- 第一代渲染流程存档 → [_archive/legacy-pipeline/README.md](_archive/legacy-pipeline/README.md)
+- 第二代内容管道存档 → [_archive/obsidian-zhihu-legacy/README.md](_archive/obsidian-zhihu-legacy/README.md)
