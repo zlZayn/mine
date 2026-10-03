@@ -14,9 +14,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 from . import frontmatter as fm
-from .config import SiteConfig
+from .config import SiteConfig, allocate_palette
 from .paths import Paths
-from .slug import stable_index
 
 # frontmatter 写回时的键顺序，保证 diff 稳定
 ZH_KEY_ORDER = ["zhihu-title", "zhihu-topics", "zhihu-link", "zhihu-created-at"]
@@ -99,6 +98,8 @@ class Article:
     slug: str
     zh: Side
     en: Side
+    # 色板下标，由 load_articles 在排序后统一分配（见 config.allocate_palette）
+    color_index: int = 0
 
     @property
     def display_en_title(self) -> str:
@@ -119,14 +120,8 @@ class Article:
     def display_zh_title(self) -> str:
         return self.zh.title
 
-    def color_index(self, config: SiteConfig) -> int:
-        """先查固定分配表，查不到就用稳定哈希兜底。"""
-        if self.slug in config.palette_assign:
-            return config.palette_assign[self.slug] % len(config.palette)
-        return stable_index(self.slug, len(config.palette))
-
     def color(self, config: SiteConfig):
-        return config.palette[self.color_index(config)]
+        return config.palette[self.color_index]
 
 
 def english_repo_url(config: SiteConfig, slug: str) -> str:
@@ -207,7 +202,11 @@ def _slugs_in(lang_dir: Path) -> set[str]:
 
 
 def load_articles(paths: Paths, config: SiteConfig) -> list[Article]:
-    """扫描 en/ 与 zh/，按 slug 配对，按配置排序。"""
+    """扫描 en/ 与 zh/，按 slug 配对，按配置排序，并分配颜色。
+
+    颜色在排序**之后**分配：卡片在页面上的先后就是颜色的分配依据，
+    因此换排序方向时颜色会跟着重排，而不是错位。
+    """
     en_slugs = _slugs_in(paths.en_dir)
     zh_slugs = _slugs_in(paths.zh_dir)
 
@@ -222,4 +221,11 @@ def load_articles(paths: Paths, config: SiteConfig) -> list[Article]:
 
     reverse = config.order_direction == "newest-first"
     articles.sort(key=lambda a: (a.zh.sort_key, a.en.sort_key, a.slug), reverse=reverse)
+
+    assignment = allocate_palette(
+        [a.slug for a in articles], config.palette, config.palette_pinned
+    )
+    for article in articles:
+        article.color_index = assignment[article.slug]
+
     return articles

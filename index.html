@@ -42,9 +42,17 @@
     box-shadow: 0 10px 18px -3px rgb(0 0 0 / .1), 0 4px 8px -2px rgb(0 0 0 / .06);
 }
 
-/* ---- 顶部渐变条 ---- */
-.article-card-gradient { height: .5rem; transition: height .3s ease; }
-.article-card:hover .article-card-gradient { height: .75rem; }
+/* ---- 顶部渐变条 ----
+ *
+ * 高度恒定，悬浮时不做任何尺寸变化。
+ *
+ * 曾有 `:hover { height: .75rem }`，色条从 8px 长到 12px：
+ * 卡片被撑高 → CSS Grid 行高重算 → 下方所有卡片一起下移 4px。
+ * 鼠标扫过一列卡片时整页会跳动。
+ *
+ * 悬浮反馈一律只用 transform 与 box-shadow —— 它们不参与布局计算，
+ * 因此永远不会影响别的卡片。 */
+.article-card-gradient { height: .5rem; }
 
 /* ---- 卡片内容 ---- */
 .article-card-content {
@@ -151,13 +159,13 @@
 <div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/all-subsets-regression-based-on-broom-package/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/1957450684447323826" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
 </div>
 </div><div class="article-card">
-<div class="article-card-gradient bg-gradient-to-r from-emerald-300 to-emerald-600"></div>
+<div class="article-card-gradient bg-gradient-to-r from-yellow-300 to-yellow-600"></div>
 <div class="article-card-content">
 <h3 class="article-card-title"><span class="title-en">【R Language】The tidymodels Worldview: A Rigorous Language Hidden in R</span><span class="title-zh">【R 语言】tidymodels 的世界观：一门藏在 R 里的严谨语言</span></h3>
 <div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/tidymodels-worldview/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/2088737447098303432" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>
 </div>
 </div><div class="article-card">
-<div class="article-card-gradient bg-gradient-to-r from-rose-300 to-rose-600"></div>
+<div class="article-card-gradient bg-gradient-to-r from-indigo-300 to-indigo-600"></div>
 <div class="article-card-content">
 <h3 class="article-card-title"><span class="title-en">【R Language】Writing R Extensions in Rust: A Complete Practical Guide</span><span class="title-zh">【R 语言】用 Rust 给 R 写扩展：完整实践指南</span></h3>
 <div class="article-card-links flex justify-end"><a href="https://github.com/zlZayn/mine/blob/main/R%20Language/en/rust-extensions-for-r/index.md" target="_blank" class="link-button github-link">English-Github</a><a href="https://zhuanlan.zhihu.com/p/2087557727866320879" target="_blank" class="link-button zhihu-link">中文-知乎</a></div>

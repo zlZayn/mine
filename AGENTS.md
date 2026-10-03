@@ -49,10 +49,21 @@ npx markdownlint-cli2 --fix    # 自动修（空行、列表标记）
 
 ## 待办
 
-- [ ] 清理仓库外残留：`D:\PythonDirectory\_知乎_legacy_backup_20261003\`
-      （采集残留备份，新流水线已不需要）
 - [ ] `markdownlint` 剩余 14 项：多为 MD025（多一级标题）与 MD040（无语言围栏），
       目录树那处**有意留空**，不必强行满足
+
+---
+
+## 仓库外的东西
+
+以下**刻意不入库**，放在仓库外按需查阅。理由见 [.gitignore](.gitignore)。
+
+| 位置 | 内容 |
+| --- | --- |
+| `D:\PythonDirectory\_archive_mine\` | 旧流程源码（两代）、知乎导出原件 |
+| `D:\PythonDirectory\_知乎_legacy_backup_20261003\` | 第一代流程的采集残留（另存的网页 HTML） |
+
+早期曾在仓库内建 `_archive/`，后按要求移除，`.gitignore` 已兜底。
 
 ---
 
@@ -77,10 +88,17 @@ npx markdownlint-cli2 --fix    # 自动修（空行、列表标记）
 - **markdownlint 的默认规则会改坏东西**
   MD029 默认 lazy 编号会把 `1. 2. 3.` 改成 `1. 1. 1.`（须设 `"style": "ordered"`）；
   MD026 会去掉标题末尾句号。作用范围已收窄到 `R Language/{en,zh}`，
-  不含 `_archive/`（历史证据不得改动）与根文档（有作者语气）
+  不含根文档（有作者语气）
 - **迁移的备份机制不能改名文章目录**
   曾用 `<slug>.__stash__` 做备份，异常时不还原导致文章消失、
   且残留目录被当成一篇文章混进产物。现改为目录内的 `.assets-backup/`。
+- **卡片悬浮不能改变任何尺寸**
+  曾用 `:hover { height: .75rem }` 让色条变高：卡片被撑高 → Grid 行高重算 →
+  下方所有卡片一起下移。悬浮反馈只能用 `transform` 与 `box-shadow`，它们不参与布局。
+- **卡片高度不能用固定 `height`**
+  固定高度在标题换行时不报错，只是把内容挤变形 —— `margin-top: auto`
+  推不动按钮，于是长标题卡片的按钮紧贴标题、短标题的沉底。
+  用 `min-height`，长标题自然撑高，Grid 行内自动等高。
 
 ---
 
@@ -92,5 +110,3 @@ npx markdownlint-cli2 --fix    # 自动修（空行、列表标记）
 - 规则分层：什么写死、什么配置 → [R Language/pipeline/RULES.md](R%20Language/pipeline/RULES.md)
 - 站点与构建配置 → [R Language/pipeline/site.toml](R%20Language/pipeline/site.toml)
 - 文章来源映射 → [R Language/pipeline/vault-map.toml](R%20Language/pipeline/vault-map.toml)
-- 第一代渲染流程存档 → [_archive/legacy-pipeline/README.md](_archive/legacy-pipeline/README.md)
-- 第二代内容管道存档 → [_archive/obsidian-zhihu-legacy/README.md](_archive/obsidian-zhihu-legacy/README.md)

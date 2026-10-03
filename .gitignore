@@ -16,14 +16,21 @@ venv/
 Thumbs.db
 desktop.ini
 
-# ---- 第一代流程的采集残留：只保留源码，不入库采集数据 ----
-# 见 _archive/legacy-pipeline/README.md「本目录收录范围」
-_archive/legacy-pipeline/**/*.txt
-_archive/legacy-pipeline/**/*.html
+# ---- 历史归档：刻意不入库 ----
+#
+# 旧流程源码、知乎导出原件、采集残留都放在**仓库外**：
+#     D:\PythonDirectory\_archive_mine\
+#     D:\PythonDirectory\_知乎_legacy_backup_20261003\
+#
+# 为什么不入库（虽然 git 本身是很好的归档处）：
+#   1. 本仓是发布站点，远程仓库只应呈现站点需要的东西
+#   2. 采集残留（另存的网页 HTML）与站点无关，纯占体积
+#   3. 需要时按需查阅更合适，不必让每个 clone 都背上历史包袱
+#
+# 这条规则是兜底：万一手滑放进仓库，避免误提交。
+_archive/
+_archive_mine/
 
 # ---- 本地临时产物 ----
 _local/
 R Language/pipeline/.cache/
-
-# ---- uv 虚拟环境 ----
-.venv/

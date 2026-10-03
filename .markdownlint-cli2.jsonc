@@ -30,7 +30,6 @@
     "**/*.html",
     "_site/**",
     "**/.venv/**",
-    "**/node_modules/**",
-    "_archive/**"
+    "**/node_modules/**"
   ]
 }

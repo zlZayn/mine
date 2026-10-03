@@ -20,7 +20,6 @@ on:
     # 排除法只会在新增「非站点文件」时多跑一次部署，代价小得多。
     paths-ignore:
       - "**/*.md"          # 文档；文章源改动必然连带 index.html，由后者触发
-      - "_archive/**"      # 历史存档，不参与构建
       - ".markdownlint-cli2.jsonc"
       - "tools/**"         # 与本专栏无关
       - ".gitignore"

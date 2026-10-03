@@ -84,24 +84,27 @@ stops = [
   "rose-300:rose-600",
 ]
 
-# 固定色号分配：article id -> 色板下标（0 起）
+# -----------------------------------------------------------------------------
+# 已发布文章的固定色
 #
-#  为什么不用"按发布时间排序"自动分配？
-#  因为那样每加一篇新文章（哪怕插在中间），后面所有卡片的颜色都会变。
-#  固定表 + 新文章用稳定哈希兜底 = 已发布卡片的颜色永不改变。
+#  格式： article id = "色名"，色名取自上面的 stops。
+#  用色名而不是下标 —— 往 stops 里插一个新颜色时，下标会整体错位，
+#  而色名不会。
 #
-#  下表逐条对齐旧 index.html 里已发布的颜色，是回归基线，不要随意改动。
-#  下标含义见上面的 stops 数组（0=red … 11=rose）。
-[palette.assign]
-anonymous-functions = 0                                       # red
-a-workflow-based-on-nested-data-frames = 1                    # orange
-all-subsets-regression-based-on-broom-package = 2             # amber
-plotting-known-functions-with-ggplot2 = 4                     # emerald
-mice-package-for-multiple-imputation-and-batch-modeling = 5   # teal
-nonlinear-least-squares-and-linear-models = 6                 # blue
-chi-square-distribution-and-convolution-effect = 8            # violet
-lorenz-curve-and-gini-index = 9                               # purple
-broom-package-for-tidy-modeling = 10                          # pink
+#  这些是回归基线：已发布卡片的颜色不因新增文章而改变。
+#  新文章**不必登记**：未登记的会由 build 自动挑一个不与相邻卡片冲突的颜色，
+#  并保证同一篇文章的颜色永远不变（见 palette.allocate）。
+# -----------------------------------------------------------------------------
+[palette.pinned]
+anonymous-functions = "red"
+a-workflow-based-on-nested-data-frames = "orange"
+all-subsets-regression-based-on-broom-package = "amber"
+plotting-known-functions-with-ggplot2 = "emerald"
+mice-package-for-multiple-imputation-and-batch-modeling = "teal"
+nonlinear-least-squares-and-linear-models = "blue"
+chi-square-distribution-and-convolution-effect = "violet"
+lorenz-curve-and-gini-index = "purple"
+broom-package-for-tidy-modeling = "pink"
 
 # 新增文章：由 slug 稳定哈希自动取色（无需登记，登记了也不会变）
 

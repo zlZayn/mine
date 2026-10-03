@@ -12,7 +12,6 @@
 ```
 mine/
 ├── index.html                      ← 生成物，唯一入口页，不要手改
-├── _archive/legacy-pipeline/       ← 第一代抓取式流程的源码存档（已废弃）
 └── R Language/                     ← 一个"专栏"块，自包含
     ├── en/<slug>/                  ← 英文原文（GitHub 上是源文件，Pages 上是渲染页）
     │   ├── index.md
