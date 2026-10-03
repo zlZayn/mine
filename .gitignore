@@ -1,0 +1,26 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---- R ----
+.Rhistory
+.RData
+.Rproj.user/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 第一代流程的采集残留：只保留源码，不入库采集数据 ----
+# 见 _archive/legacy-pipeline/README.md「本目录收录范围」
+_archive/legacy-pipeline/**/*.txt
+_archive/legacy-pipeline/**/*.html
+
+# ---- 本地临时产物 ----
+_local/
+R Language/pipeline/.cache/

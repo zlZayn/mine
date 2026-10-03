@@ -1,0 +1,203 @@
+# 提取颜色并根据HTML文件中的颜色信息生成动态模板
+import re
+
+# 定义文件路径
+zhihu_html_path = r'd:\PythonDirectory\知乎\article_cards_zhihu.html'
+github_html_path = r'd:\PythonDirectory\知乎\article_cards_github.html'
+output_template_path = r'd:\PythonDirectory\知乎\dynamic_article_card_template.txt'
+
+# 内嵌HTML模板头部
+EMBEDDED_TEMPLATE_HEADER = '''<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 使用说明：根据这两个文件中的链接与文章：article_cards_github.html、article_cards_zhihu.html，将内容一一对应填入该模板的占位标识"{{}}"（使用generate_combined_cards.py生成映射，保证是这种括号【】）处，生成html（不改模板） */
+        /* 使用CSS选择器定义卡片样式 */
+        .article-card-link { display: block; }
+        .article-card { 
+            background-color: white; 
+            border-radius: 0.5rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+            overflow: hidden; 
+            height: 10rem; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .article-card-gradient { 
+            height: 0.5rem; 
+        }
+        .article-card-content { 
+            padding: 1rem; 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .article-card-title { 
+            font-size: 1.125rem; 
+            font-weight: 700; 
+            color: #1f2937; 
+            line-height: 1.5; 
+            margin-bottom: 0.5rem; 
+        }
+        .article-card-links { 
+            display: flex; 
+            gap: 0.75rem; 
+            margin-top: auto; 
+        }
+        .link-button { 
+            padding: 0.375rem 1rem; 
+            border-radius: 9999px; /* 完全圆角 */
+            text-decoration: none; 
+            font-size: 0.875rem; 
+            font-weight: 500; 
+            transition: all 200ms ease-in-out; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-width: 64px; 
+        }
+        /* 初始状态：无边框无颜色，只有黑色文字 */
+        .zhihu-link { 
+            background-color: transparent; 
+            color: #1f2937; 
+            border: none; 
+        }
+        /* 悬浮状态：黑色背景，白色文字 */
+        .zhihu-link:hover { 
+            background-color: #0f172a; 
+            color: white; 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15); 
+        }
+        /* GitHub链接也做相同修改 */
+        .github-link { 
+            background-color: transparent; 
+            color: #1f2937; 
+            border: none; 
+        }
+        .github-link:hover { 
+            background-color: #0f172a; 
+            color: white; 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15); 
+        }
+        
+        /* GitHub角标样式 */
+        .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out
+        }
+        @keyframes octocat-wave {
+            0%, 100% { transform: rotate(0) }
+            20%, 60% { transform: rotate(-25deg) }
+            40%, 80% { transform: rotate(10deg) }
+        }
+        @media (max-width: 500px) {
+            .github-corner:hover .octo-arm {
+                animation: none
+            }
+            .github-corner .octo-arm {
+                animation: octocat-wave 560ms ease-in-out
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6 pt-16 min-h-screen">
+    <a href="https://github.com/zlZayn/mine" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a>
+     <div class="max-w-7xl mx-auto">
+         <!-- 标题 -->
+         <div class="text-center mb-10">
+             <h1 class="text-4xl font-bold text-gray-800 mb-2 text-center"><a href="https://www.r-project.org" target="_blank" rel="noreferrer" class="inline-block"> <img src="https://www.r-project.org/Rlogo.png" alt="R Language" width="40" height="40" style="display: block; margin: 0 auto;"/> </a></h1>
+             <div class="flex justify-center items-center space-x-4">
+                <a href="https://github.com/zlZayn/mine/tree/main/R%20Language" target="_blank" class="link-button github-link"><strong>Github Column</strong></a>
+                <a href="https://www.zhihu.com/column/c_1944877565140510713" target="_blank" class="link-button zhihu-link"><strong>知乎专栏</strong></a>
+            </div>
+         </div>
+          
+         <!-- 卡片网格布局 -->
+         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-6">'''
+
+# 内嵌HTML模板尾部
+EMBEDDED_TEMPLATE_FOOTER = '''        </div>
+    </div>
+</body>
+</html>'''
+
+# 从HTML文件中提取卡片颜色和数量
+def extract_card_colors_and_count():
+    import random
+    
+    # 随机选择从GitHub或知乎HTML文件中提取颜色信息
+    html_files = [github_html_path, zhihu_html_path]
+    selected_file = random.choice(html_files)
+    
+    print(f"随机选择的HTML文件: {selected_file}")
+    
+    # 从选中的HTML文件中提取颜色信息
+    colors = []
+    with open(selected_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+        
+    # 使用正则表达式查找所有的颜色类
+    color_pattern = r'bg-gradient-to-r\s+(from-[a-z]+-\d+\s+to-[a-z]+-\d+)'
+    matches = re.findall(color_pattern, content)
+    
+    # 去重并保持顺序
+    for match in matches:
+        color_class = f'bg-gradient-to-r {match}'
+        if color_class not in colors:
+            colors.append(color_class)
+            
+    return colors, len(colors)
+
+# 生成单个卡片HTML
+def generate_card_html(color_class, index):
+    return f'''    <div class="article-card">
+        <div class="article-card-gradient {color_class}"></div>
+        <div class="article-card-content">
+            <h3 class="article-card-title">{{{{ article_english_title_{index} }}}}<br/>{{{{ article_chinese_title_{index} }}}}</h3>
+            <div class="article-card-links flex justify-end">
+                <a href="{{{{ article_english_link_{index} }}}}" target="_blank" class="link-button github-link">English-Github</a>
+                <a href="{{{{ article_chinese_link_{index} }}}}" target="_blank" class="link-button zhihu-link">中文-知乎</a>
+            </div>
+        </div>
+    </div>'''
+
+# 生成动态模板
+def generate_dynamic_template(colors):
+    # 构建完整模板
+    template = EMBEDDED_TEMPLATE_HEADER
+    
+    # 循环生成卡片
+    for i, color_class in enumerate(colors):
+        template += '\n\n' + generate_card_html(color_class, i + 1)
+    
+    # 添加模板尾部
+    template += '\n' + EMBEDDED_TEMPLATE_FOOTER
+    
+    return template
+
+# 主函数
+def main():
+    # 提取卡片颜色和数量
+    colors, card_count = extract_card_colors_and_count()
+    
+    # 生成动态模板
+    dynamic_template = generate_dynamic_template(colors)
+    
+    # 写入新的模板文件
+    with open(output_template_path, 'w', encoding='utf-8') as f:
+        f.write(dynamic_template)
+    
+    print(f"总卡片数量: {card_count}")
+    # 预先格式化颜色列表
+    colors_formatted = '\n' + '\n'.join(colors)
+    print(f"提取的卡片颜色有: {colors_formatted}")
+    print(f"动态模板已生成，已保存到: {output_template_path}")
+
+if __name__ == "__main__":
+    main()
