@@ -20,5 +20,16 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/rlang_pipeline"]
 
+[tool.uv]
+# Pin the lockfile registry to official PyPI. Without this, the machine-global
+# ~/AppData/Roaming/uv/uv.toml index-url (a mirror) outranks the registry
+# already recorded in uv.lock, and any `uv lock` rewrites all of it.
+# Note: `default-index` is rejected by uv 0.11 (unknown field, the whole
+# [tool.uv] section is then ignored) — it must be the [[tool.uv.index]] table.
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
 [dependency-groups]
 dev = ["pytest>=8.0"]
